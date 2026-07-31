@@ -48,6 +48,7 @@
             android:name=".service.accessibility.AutoAgentAccessibilityService"
             android:exported="false"
             android:label="AutoAgent Automation"
+            android:exported="true"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.service.accessibility.AccessibilityService" />
