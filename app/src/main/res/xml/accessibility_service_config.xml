@@ -4,8 +4,7 @@
     android:description="@string/accessibility_description"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds|flagRequestEnhancedWebAccessibility|flagRequestFilterKeyEvents"
+    android:accessibilityFlags="flagReportViewIds|flagRequestFilterKeyEvents"
     android:canPerformGestures="true"
     android:canRetrieveWindowContent="true"
-    android:notificationTimeout="100"
-    android:settingsActivity=".presentation.MainActivity" />
+    android:notificationTimeout="100" />

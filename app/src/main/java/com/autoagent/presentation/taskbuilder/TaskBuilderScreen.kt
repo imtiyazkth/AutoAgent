@@ -2,8 +2,8 @@ package com.autoagent.presentation.taskbuilder
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.autoagent.data.db.TaskEntity
 import com.autoagent.data.repository.AgentRepository
+import com.autoagent.domain.model.InstalledAppInfo
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import androidx.lifecycle.ViewModel
@@ -26,23 +27,65 @@ class TaskBuilderViewModel @Inject constructor(
     private val repository: AgentRepository
 ) : ViewModel() {
     fun saveTask(
-        name: String, description: String, triggerType: String,
-        triggerTime: String, url: String, inputText: String,
+        name: String,
+        description: String,
+        triggerType: String,
+        triggerTime: String,
+        selectedApp: InstalledAppInfo?,
+        url: String,
+        inputText: String,
+        buttonText: String,
         onDone: () -> Unit
     ) {
         viewModelScope.launch {
-            val steps = buildList {
-                if (url.isNotBlank()) {
-                    add(mapOf("id" to 1, "type" to "OPEN_URL", "targetUrl" to url,
-                        "delayMs" to 1000, "retryCount" to 2, "description" to "URL open karo"))
-                }
-                if (inputText.isNotBlank()) {
-                    add(mapOf("id" to 2, "type" to "ENTER_TEXT", "inputText" to inputText,
-                        "delayMs" to 500, "retryCount" to 2, "description" to "Text type karo"))
-                }
+            val steps = mutableListOf<Map<String, Any>>()
+
+            if (selectedApp != null) {
+                steps.add(mapOf(
+                    "id" to 1,
+                    "type" to "LAUNCH_APP",
+                    "targetApp" to selectedApp.packageName,
+                    "delayMs" to 1500,
+                    "retryCount" to 2,
+                    "description" to "${selectedApp.appName} open karo"
+                ))
             }
+
+            if (url.isNotBlank()) {
+                steps.add(mapOf(
+                    "id" to steps.size + 1,
+                    "type" to "OPEN_URL",
+                    "targetUrl" to url,
+                    "delayMs" to 2000,
+                    "retryCount" to 2,
+                    "description" to "URL open karo: $url"
+                ))
+            }
+
+            if (inputText.isNotBlank()) {
+                steps.add(mapOf(
+                    "id" to steps.size + 1,
+                    "type" to "ENTER_TEXT",
+                    "inputText" to inputText,
+                    "delayMs" to 1000,
+                    "retryCount" to 2,
+                    "description" to "Text type karo"
+                ))
+            }
+
+            if (buttonText.isNotBlank()) {
+                steps.add(mapOf(
+                    "id" to steps.size + 1,
+                    "type" to "TAP_BUTTON",
+                    "buttonText" to buttonText,
+                    "delayMs" to 500,
+                    "retryCount" to 3,
+                    "description" to "'$buttonText' button tap karo"
+                ))
+            }
+
             val task = TaskEntity(
-                name = name.ifBlank { "My Task" },
+                name = name.ifBlank { selectedApp?.appName ?: "My Task" },
                 description = description,
                 triggerType = triggerType,
                 triggerTime = triggerTime.ifBlank { null },
@@ -69,23 +112,28 @@ class TaskBuilderViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskBuilderScreen(
+    preSelectedApp: InstalledAppInfo? = null,
     onBack: () -> Unit,
+    onPickApp: () -> Unit,
     viewModel: TaskBuilderViewModel = hiltViewModel()
 ) {
-    var name by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(preSelectedApp?.appName?.let { "$it Task" } ?: "") }
     var description by remember { mutableStateOf("") }
     var triggerType by remember { mutableStateOf("MANUAL") }
     var triggerTime by remember { mutableStateOf("") }
+    var selectedApp by remember { mutableStateOf(preSelectedApp) }
     var url by remember { mutableStateOf("") }
     var inputText by remember { mutableStateOf("") }
-    var saved by remember { mutableStateOf(false) }
+    var buttonText by remember { mutableStateOf("") }
 
-    val triggers = listOf("MANUAL", "DAILY", "ONE_TIME", "INTERVAL")
+    LaunchedEffect(preSelectedApp) {
+        if (preSelectedApp != null) selectedApp = preSelectedApp
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Naya Task Banao", fontWeight = FontWeight.Bold) },
+                title = { Text("Naya Task", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, null)
@@ -100,19 +148,47 @@ fun TaskBuilderScreen(
                 .padding(padding)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("📋 Task Details", fontWeight = FontWeight.Bold,
+
+            // STEP 1 - App Select
+            Text("📱 Step 1: App Choose karo", fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium)
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                onClick = onPickApp
+            ) {
+                Row(modifier = Modifier.padding(16.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Apps, null,
+                        tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(selectedApp?.appName ?: "App select karo",
+                            fontWeight = FontWeight.Bold)
+                        Text(selectedApp?.packageName ?: "Tap karke app choose karo",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Icon(Icons.Filled.ChevronRight, null)
+                }
+            }
+
+            HorizontalDivider()
+
+            // STEP 2 - Task Details
+            Text("✏️ Step 2: Task Details", fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Task ka naam *") },
-                placeholder = { Text("jaise: Chrome kholo, ChatGPT message") },
+                label = { Text("Task naam *") },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Filled.Label, null) },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                leadingIcon = { Icon(Icons.Filled.Label, null) }
             )
 
             OutlinedTextField(
@@ -123,23 +199,21 @@ fun TaskBuilderScreen(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            Divider()
-            Text("⏰ Trigger", fontWeight = FontWeight.Bold,
+            HorizontalDivider()
+
+            // STEP 3 - Trigger
+            Text("⏰ Step 3: Kab chalega?", fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium)
 
-            // Trigger type selector
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                triggers.forEach { t ->
+            val triggers = listOf("MANUAL" to "Manual (Abhi)", "DAILY" to "Roz",
+                "ONE_TIME" to "Ek Baar", "INTERVAL" to "Interval")
+
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                triggers.forEach { (type, label) ->
                     FilterChip(
-                        selected = triggerType == t,
-                        onClick = { triggerType = t },
-                        label = { Text(when(t) {
-                            "MANUAL" -> "Manual"
-                            "DAILY" -> "Roz"
-                            "ONE_TIME" -> "Ek Baar"
-                            "INTERVAL" -> "Interval"
-                            else -> t
-                        }, style = MaterialTheme.typography.labelSmall) }
+                        selected = triggerType == type,
+                        onClick = { triggerType = type },
+                        label = { Text(label, style = MaterialTheme.typography.labelSmall) }
                     )
                 }
             }
@@ -148,62 +222,98 @@ fun TaskBuilderScreen(
                 OutlinedTextField(
                     value = triggerTime,
                     onValueChange = { triggerTime = it },
-                    label = { Text("Time (HH:MM format, jaise 08:00)") },
+                    label = { Text("Time (HH:MM)") },
                     placeholder = { Text("08:00") },
                     modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Filled.Schedule, null) },
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(12.dp),
+                    leadingIcon = { Icon(Icons.Filled.Schedule, null) }
                 )
             }
 
-            Divider()
-            Text("🤖 Actions", fontWeight = FontWeight.Bold,
+            HorizontalDivider()
+
+            // STEP 4 - Actions
+            Text("🤖 Step 4: Kya karna hai?", fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
                 label = { Text("URL open karo (optional)") },
-                placeholder = { Text("https://google.com") },
+                placeholder = { Text("https://claude.ai/chat") },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Filled.Link, null) },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                leadingIcon = { Icon(Icons.Filled.Link, null) }
             )
 
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                label = { Text("Text type/paste karo (optional)") },
-                placeholder = { Text("Koi message ya prompt...") },
+                label = { Text("Text type karo (optional)") },
+                placeholder = { Text("Prompt ya message yahan likho...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
-                leadingIcon = { Icon(Icons.Filled.Edit, null) },
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                leadingIcon = { Icon(Icons.Filled.Edit, null) }
+            )
+
+            OutlinedTextField(
+                value = buttonText,
+                onValueChange = { buttonText = it },
+                label = { Text("Button tap karo (optional)") },
+                placeholder = { Text("Send, Submit, Search...") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                leadingIcon = { Icon(Icons.Filled.TouchApp, null) }
             )
 
             Spacer(Modifier.height(8.dp))
 
+            // PREVIEW
+            if (selectedApp != null || url.isNotBlank() || inputText.isNotBlank()) {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("👁️ Preview — Ye steps honge:",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(6.dp))
+                        var stepNum = 1
+                        selectedApp?.let {
+                            Text("$stepNum. 📱 ${it.appName} launch hogi")
+                            stepNum++
+                        }
+                        if (url.isNotBlank()) {
+                            Text("$stepNum. 🔗 URL open hoga: ${url.take(40)}")
+                            stepNum++
+                        }
+                        if (inputText.isNotBlank()) {
+                            Text("$stepNum. ⌨️ Text type hoga: '${inputText.take(30)}...'")
+                            stepNum++
+                        }
+                        if (buttonText.isNotBlank()) {
+                            Text("$stepNum. 👆 '$buttonText' button tap hoga")
+                        }
+                    }
+                }
+            }
+
             Button(
                 onClick = {
-                    viewModel.saveTask(name, description, triggerType,
-                        triggerTime, url, inputText) {
-                        saved = true
-                        onBack()
-                    }
+                    viewModel.saveTask(name, description, triggerType, triggerTime,
+                        selectedApp, url, inputText, buttonText) { onBack() }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = name.isNotBlank(),
+                enabled = name.isNotBlank() || selectedApp != null,
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Icon(Icons.Filled.Save, null)
                 Spacer(Modifier.width(8.dp))
                 Text("Task Save Karo", fontWeight = FontWeight.Bold)
-            }
-
-            if (name.isBlank()) {
-                Text("* Task ka naam zaroori hai",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error)
             }
 
             Spacer(Modifier.height(40.dp))
