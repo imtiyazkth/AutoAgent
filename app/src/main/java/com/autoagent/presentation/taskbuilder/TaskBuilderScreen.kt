@@ -106,14 +106,14 @@ fun TaskBuilderScreen(
                 }
             }
 
-            HorizontalDivider()
+            Divider()
             Text("✏️ Step 2: Task naam", fontWeight = FontWeight.Bold)
             OutlinedTextField(value = name, onValueChange = { name = it },
                 label = { Text("Task naam *") }, modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 leadingIcon = { Icon(Icons.Filled.Label, null) })
 
-            HorizontalDivider()
+            Divider()
             Text("⏰ Step 3: Trigger", fontWeight = FontWeight.Bold)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("MANUAL" to "Manual", "DAILY" to "Roz", "ONE_TIME" to "Ek Baar").forEach { (type, label) ->
@@ -128,7 +128,7 @@ fun TaskBuilderScreen(
                     leadingIcon = { Icon(Icons.Filled.Schedule, null) })
             }
 
-            HorizontalDivider()
+            Divider()
             Text("🤖 Step 4: Actions", fontWeight = FontWeight.Bold)
             OutlinedTextField(value = url, onValueChange = { url = it },
                 label = { Text("URL open karo (optional)") }, placeholder = { Text("https://claude.ai") },
