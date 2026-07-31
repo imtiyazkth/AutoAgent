@@ -2,26 +2,16 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- NETWORK -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-
-    <!-- SCHEDULING -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
-
-    <!-- AUTOMATION -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
-
-    <!-- BIOMETRIC -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
     <application
         android:name=".AutoAgentApp"
@@ -43,12 +33,10 @@
             </intent-filter>
         </activity>
 
-        <!-- ACCESSIBILITY SERVICE — core automation engine -->
         <service
             android:name=".service.accessibility.AutoAgentAccessibilityService"
-            android:exported="false"
-            android:label="AutoAgent Automation"
             android:exported="true"
+            android:label="AutoAgent Automation"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.service.accessibility.AccessibilityService" />
@@ -58,7 +46,6 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- BOOT RECEIVER -->
         <receiver
             android:name=".service.BootReceiver"
             android:exported="true">
@@ -67,7 +54,6 @@
             </intent-filter>
         </receiver>
 
-        <!-- WORK MANAGER -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
