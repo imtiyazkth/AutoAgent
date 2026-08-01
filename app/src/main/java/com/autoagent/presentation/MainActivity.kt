@@ -60,7 +60,6 @@ fun AppNavigation() {
             onViewLogs = {},
             onDiagnostics = { screen = "diagnostics" },
             onSetupAccessibility = { screen = "accessibility_setup" },
-            onSetupAccessibility = { screen = "accessibility_setup" }
         )
         "app_list" -> AppListScreen(
             onAppSelected = { app ->
