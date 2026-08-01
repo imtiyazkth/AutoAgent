@@ -34,6 +34,7 @@ fun DashboardScreen(
     onEditTask: (Long) -> Unit,
     onViewLogs: () -> Unit,
     onDiagnostics: () -> Unit = {},
+    onSetupAccessibility: () -> Unit = {},
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
