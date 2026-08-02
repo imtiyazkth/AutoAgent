@@ -26,7 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.autoagent.data.repository.AgentRepository
-import com.autoagent.presentation.setup.isAccessibilityEnabled
+import com.autoagent.util.isAccessibilityEnabled
 import com.autoagent.service.accessibility.AutoAgentAccessibilityService
 import com.autoagent.util.PinManager
 import dagger.hilt.android.lifecycle.HiltViewModel

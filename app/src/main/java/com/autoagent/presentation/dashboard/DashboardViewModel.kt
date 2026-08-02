@@ -8,7 +8,7 @@ import com.autoagent.data.db.TaskEntity
 import com.autoagent.data.repository.AgentRepository
 import com.autoagent.domain.model.RunStatus
 import com.autoagent.domain.model.StepLog
-import com.autoagent.presentation.setup.isAccessibilityEnabled
+import com.autoagent.util.isAccessibilityEnabled
 import com.autoagent.service.accessibility.AutoAgentAccessibilityService
 import com.autoagent.service.scheduler.TaskExecutorWorker
 import com.autoagent.util.GsonHelper
