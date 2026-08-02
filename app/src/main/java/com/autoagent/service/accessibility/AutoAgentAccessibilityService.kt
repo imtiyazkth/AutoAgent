@@ -13,142 +13,154 @@ import com.autoagent.domain.model.ActionType
 import com.autoagent.domain.model.RunStatus
 import com.autoagent.domain.model.StepLog
 import com.autoagent.domain.model.TaskStep
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import javax.inject.Inject
 
-@AndroidEntryPoint
+/**
+ * CRITICAL: Do NOT use @AndroidEntryPoint on AccessibilityService.
+ * Hilt injection on AccessibilityService causes silent registration failure
+ * on Android 10+ and MIUI devices.
+ * Use companion object for shared state instead.
+ */
 class AutoAgentAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     companion object {
-        // Shared state — UI can observe these
+        private val TAG = "AutoAgent_Accessibility"
+
+        // Shared state observable by UI
         val isRunning = MutableStateFlow(false)
         val currentStep = MutableStateFlow<String?>(null)
-        val stepLogs = MutableStateFlow<List<StepLog>>(emptyList())
         val emergencyStop = MutableStateFlow(false)
-
-        // Action broadcast
-        const val ACTION_EXECUTE_STEPS = "com.autoagent.EXECUTE_STEPS"
-        const val ACTION_EMERGENCY_STOP = "com.autoagent.EMERGENCY_STOP"
+        val isServiceConnected = MutableStateFlow(false)
+        val lastConnectedTime = MutableStateFlow<Long?>(null)
+        val lastError = MutableStateFlow<String?>(null)
 
         private var instance: AutoAgentAccessibilityService? = null
+
         fun getInstance(): AutoAgentAccessibilityService? = instance
+
+        fun isAvailable(): Boolean = instance != null && isServiceConnected.value
     }
 
+    // =========================================
+    // LIFECYCLE
+    // =========================================
     override fun onServiceConnected() {
-        super.onServiceConnected()
         instance = this
-        Log.i("AutoAgent", "Accessibility Service connected ✅")
+        isServiceConnected.value = true
+        lastConnectedTime.value = System.currentTimeMillis()
+        lastError.value = null
+        Log.i(TAG, "✅ AutoAgent Accessibility Service connected!")
+    }
+
+    override fun onUnbind(intent: Intent?): Boolean {
+        instance = null
+        isServiceConnected.value = false
+        isRunning.value = false
+        currentStep.value = null
+        Log.i(TAG, "AutoAgent Accessibility Service disconnected")
+        return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         instance = null
+        isServiceConnected.value = false
+        isRunning.value = false
         serviceScope.cancel()
+        super.onDestroy()
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Used for waitForText detection
+        // Used for waitForText — handled in executeSteps
     }
 
     override fun onInterrupt() {
-        Log.w("AutoAgent", "Accessibility Service interrupted")
+        Log.w(TAG, "Service interrupted")
+        isRunning.value = false
     }
 
     // =========================================
-    // EXECUTE A LIST OF STEPS
+    // EXECUTE STEPS
     // =========================================
     suspend fun executeSteps(
         steps: List<TaskStep>,
-        onStepComplete: (StepLog) -> Unit
+        onStepDone: (StepLog) -> Unit
     ): RunStatus {
         isRunning.value = true
         emergencyStop.value = false
-        val logs = mutableListOf<StepLog>()
 
-        try {
+        return try {
             for (step in steps) {
-                // Emergency stop check
                 if (emergencyStop.value) {
-                    Log.w("AutoAgent", "Emergency stop triggered!")
                     return RunStatus.CANCELLED
                 }
 
-                currentStep.value = "${step.type.emoji} ${step.description.ifEmpty { step.type.displayName }}"
-                Log.i("AutoAgent", "Executing step: ${step.type.name}")
+                val desc = step.description.ifEmpty { step.type.displayName }
+                currentStep.value = "${step.type.emoji} $desc"
 
                 val success = try {
-                    executeStep(step)
+                    withTimeout(10_000) { executeStep(step) }
+                } catch (e: TimeoutCancellationException) {
+                    Log.w(TAG, "Step timeout: ${step.type}")
+                    false
                 } catch (e: Exception) {
-                    Log.e("AutoAgent", "Step failed: ${e.message}")
+                    Log.e(TAG, "Step error: ${e.message}")
+                    lastError.value = e.message
                     false
                 }
 
-                val log = StepLog(
+                onStepDone(StepLog(
                     stepId = step.id,
                     actionType = step.type,
-                    description = step.description.ifEmpty { step.type.displayName },
+                    description = desc,
                     success = success,
                     errorMessage = if (!success) "Step execute nahi hua" else null
-                )
-                logs.add(log)
-                onStepComplete(log)
+                ))
 
-                // Retry logic
-                if (!success && step.retryCount > 0) {
-                    Log.i("AutoAgent", "Retrying step ${step.id}...")
-                    delay(1000)
-                    val retrySuccess = executeStep(step)
-                    if (!retrySuccess) {
-                        Log.e("AutoAgent", "Step ${step.id} retry bhi fail ho gaya")
-                    }
-                }
-
-                // Delay after step
-                if (step.delayMs > 0) {
-                    delay(step.delayMs)
-                }
+                if (step.delayMs > 0) delay(step.delayMs)
             }
-
-            return RunStatus.SUCCESS
+            RunStatus.SUCCESS
+        } catch (e: Exception) {
+            Log.e(TAG, "executeSteps error: ${e.message}")
+            lastError.value = e.message
+            RunStatus.FAILED
         } finally {
             isRunning.value = false
             currentStep.value = null
-            stepLogs.value = logs
         }
     }
 
-    // =========================================
-    // EXECUTE INDIVIDUAL STEP
-    // =========================================
     private suspend fun executeStep(step: TaskStep): Boolean {
         return when (step.type) {
-            ActionType.LAUNCH_APP -> launchApp(step.targetApp ?: return false)
-            ActionType.OPEN_URL -> openUrl(step.targetUrl ?: return false)
-            ActionType.TAP_BUTTON -> tapByText(step.buttonText ?: return false)
-            ActionType.TAP_BY_LABEL -> tapByContentDescription(step.buttonText ?: return false)
-            ActionType.ENTER_TEXT -> enterText(step.inputText ?: return false)
-            ActionType.PASTE_CLIPBOARD -> pasteClipboard()
-            ActionType.SCROLL_DOWN -> scrollScreen("down")
-            ActionType.SCROLL_UP -> scrollScreen("up")
-            ActionType.WAIT_FOR_TEXT -> waitForText(step.waitForText ?: return false)
-            ActionType.WAIT_SECONDS -> { delay((step.delayMs).coerceAtLeast(500)); true }
-            ActionType.PRESS_BACK -> { performGlobalAction(GLOBAL_ACTION_BACK); true }
-            ActionType.GO_HOME -> { performGlobalAction(GLOBAL_ACTION_HOME); true }
-            ActionType.CLOSE_APP -> { performGlobalAction(GLOBAL_ACTION_RECENTS); delay(300)
-                performGlobalAction(GLOBAL_ACTION_HOME); true }
-            ActionType.READ_TEXT -> readVisibleText()
+            ActionType.LAUNCH_APP    -> launchApp(step.targetApp ?: return false)
+            ActionType.OPEN_URL      -> openUrl(step.targetUrl ?: return false)
+            ActionType.TAP_BUTTON    -> { delay(500); tapByText(step.buttonText ?: return false) }
+            ActionType.TAP_BY_LABEL  -> { delay(500); tapByLabel(step.buttonText ?: return false) }
+            ActionType.ENTER_TEXT    -> { delay(300); enterText(step.inputText ?: return false) }
+            ActionType.PASTE_CLIPBOARD -> { delay(300); pasteClipboard() }
+            ActionType.SCROLL_DOWN   -> scrollScreen("down")
+            ActionType.SCROLL_UP     -> scrollScreen("up")
+            ActionType.WAIT_FOR_TEXT -> waitForText(step.waitForText ?: return true)
+            ActionType.WAIT_SECONDS  -> { delay(step.delayMs.coerceAtLeast(500)); true }
+            ActionType.PRESS_BACK    -> { performGlobalAction(GLOBAL_ACTION_BACK); true }
+            ActionType.GO_HOME       -> { performGlobalAction(GLOBAL_ACTION_HOME); true }
+            ActionType.CLOSE_APP     -> {
+                performGlobalAction(GLOBAL_ACTION_RECENTS)
+                delay(300)
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                true
+            }
+            ActionType.READ_TEXT     -> readVisibleText()
             ActionType.TAKE_SCREENSHOT -> { performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT); true }
-            ActionType.CONFIRM_ACTION -> true // User already confirmed via PIN
+            ActionType.CONFIRM_ACTION -> true
         }
     }
 
     // =========================================
-    // LAUNCH APP
+    // ACTION IMPLEMENTATIONS
     // =========================================
     private fun launchApp(packageName: String): Boolean {
         return try {
@@ -158,14 +170,11 @@ class AutoAgentAccessibilityService : AccessibilityService() {
             startActivity(intent)
             true
         } catch (e: Exception) {
-            Log.e("AutoAgent", "App launch failed: $packageName - ${e.message}")
+            Log.e(TAG, "Launch failed: $packageName — ${e.message}")
             false
         }
     }
 
-    // =========================================
-    // OPEN URL
-    // =========================================
     private fun openUrl(url: String): Boolean {
         return try {
             val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
@@ -173,157 +182,87 @@ class AutoAgentAccessibilityService : AccessibilityService() {
             startActivity(intent)
             true
         } catch (e: Exception) {
-            Log.e("AutoAgent", "URL open failed: $url")
+            Log.e(TAG, "URL open failed: $url — ${e.message}")
             false
         }
     }
 
-    // =========================================
-    // TAP BY TEXT
-    // =========================================
-    private suspend fun tapByText(text: String): Boolean {
-        delay(500) // Wait for UI to settle
+    private fun tapByText(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
-        val node = findNodeByText(root, text) ?: run {
-            Log.w("AutoAgent", "Node with text '$text' not found")
-            return false
-        }
-        return performClick(node)
+        val nodes = root.findAccessibilityNodeInfosByText(text)
+        val node = nodes.firstOrNull { it.isClickable }
+            ?: nodes.firstOrNull()
+            ?: return false
+        return performClickOn(node)
     }
 
-    // =========================================
-    // TAP BY CONTENT DESCRIPTION
-    // =========================================
-    private suspend fun tapByContentDescription(description: String): Boolean {
-        delay(500)
+    private fun tapByLabel(label: String): Boolean {
         val root = rootInActiveWindow ?: return false
-        val nodes = root.findAccessibilityNodeInfosByText(description)
-        val node = nodes.firstOrNull() ?: return false
-        return performClick(node)
+        val nodes = root.findAccessibilityNodeInfosByText(label)
+        return nodes.firstOrNull()?.let { performClickOn(it) } ?: false
     }
 
-    // =========================================
-    // ENTER TEXT
-    // =========================================
-    private suspend fun enterText(text: String): Boolean {
-        delay(300)
+    private fun enterText(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
-        // Find focused or editable node
         val editNode = findEditableNode(root) ?: return false
         editNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        delay(200)
-        val args = Bundle()
-        args.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        val args = Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        }
         return editNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 
-    // =========================================
-    // PASTE CLIPBOARD
-    // =========================================
-    private suspend fun pasteClipboard(): Boolean {
-        delay(300)
+    private fun pasteClipboard(): Boolean {
         val root = rootInActiveWindow ?: return false
         val editNode = findEditableNode(root) ?: return false
         editNode.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        delay(200)
         return editNode.performAction(AccessibilityNodeInfo.ACTION_PASTE)
     }
 
-    // =========================================
-    // SCROLL SCREEN
-    // =========================================
-    private suspend fun scrollScreen(direction: String): Boolean {
-        val displayMetrics = resources.displayMetrics
-        val width = displayMetrics.widthPixels.toFloat()
-        val height = displayMetrics.heightPixels.toFloat()
-
-        val path = Path()
-        if (direction == "down") {
-            path.moveTo(width / 2, height * 0.7f)
-            path.lineTo(width / 2, height * 0.3f)
-        } else {
-            path.moveTo(width / 2, height * 0.3f)
-            path.lineTo(width / 2, height * 0.7f)
+    private fun scrollScreen(direction: String): Boolean {
+        val dm = resources.displayMetrics
+        val w = dm.widthPixels.toFloat()
+        val h = dm.heightPixels.toFloat()
+        val path = Path().apply {
+            if (direction == "down") {
+                moveTo(w / 2, h * 0.7f); lineTo(w / 2, h * 0.3f)
+            } else {
+                moveTo(w / 2, h * 0.3f); lineTo(w / 2, h * 0.7f)
+            }
         }
-
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, 300))
             .build()
-
         return dispatchGesture(gesture, null, null)
     }
 
-    // =========================================
-    // WAIT FOR TEXT
-    // =========================================
-    private suspend fun waitForText(text: String, timeoutMs: Long = 10000): Boolean {
+    private suspend fun waitForText(text: String, timeoutMs: Long = 8000): Boolean {
         val start = System.currentTimeMillis()
         while (System.currentTimeMillis() - start < timeoutMs) {
             if (emergencyStop.value) return false
             val root = rootInActiveWindow
-            if (root != null) {
-                val nodes = root.findAccessibilityNodeInfosByText(text)
-                if (nodes.isNotEmpty()) return true
-            }
+            if (root?.findAccessibilityNodeInfosByText(text)?.isNotEmpty() == true) return true
             delay(500)
         }
         return false
     }
 
-    // =========================================
-    // READ VISIBLE TEXT
-    // =========================================
     private fun readVisibleText(): Boolean {
         val root = rootInActiveWindow ?: return false
         val sb = StringBuilder()
         collectText(root, sb)
-        Log.i("AutoAgent", "Screen text: ${sb.toString().take(500)}")
+        Log.i(TAG, "Screen: ${sb.toString().take(200)}")
         return true
     }
 
-    // =========================================
-    // EMERGENCY STOP
-    // =========================================
-    fun triggerEmergencyStop() {
-        emergencyStop.value = true
-        isRunning.value = false
-        currentStep.value = null
-        Log.w("AutoAgent", "🛑 EMERGENCY STOP triggered!")
-    }
-
-    // =========================================
-    // HELPER FUNCTIONS
-    // =========================================
-    private fun findNodeByText(root: AccessibilityNodeInfo, text: String): AccessibilityNodeInfo? {
-        val nodes = root.findAccessibilityNodeInfosByText(text)
-        return nodes.firstOrNull { it.isClickable } ?: nodes.firstOrNull()
-    }
-
-    private fun findEditableNode(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (root.isEditable) return root
-        for (i in 0 until root.childCount) {
-            val child = root.getChild(i) ?: continue
-            val found = findEditableNode(child)
-            if (found != null) return found
-        }
-        return null
-    }
-
-    private fun performClick(node: AccessibilityNodeInfo): Boolean {
-        if (node.isClickable) {
-            return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
-        // Try clicking parent
+    private fun performClickOn(node: AccessibilityNodeInfo): Boolean {
+        if (node.isClickable) return node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         val parent = node.parent
-        if (parent != null && parent.isClickable) {
-            return parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-        }
-        // Try gesture click on bounds
+        if (parent?.isClickable == true) return parent.performAction(AccessibilityNodeInfo.ACTION_CLICK)
         val bounds = Rect()
         node.getBoundsInScreen(bounds)
         if (!bounds.isEmpty) {
-            val path = Path()
-            path.moveTo(bounds.exactCenterX(), bounds.exactCenterY())
+            val path = Path().apply { moveTo(bounds.exactCenterX(), bounds.exactCenterY()) }
             val gesture = GestureDescription.Builder()
                 .addStroke(GestureDescription.StrokeDescription(path, 0, 50))
                 .build()
@@ -332,11 +271,24 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         return false
     }
 
+    private fun findEditableNode(node: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        if (node.isEditable) return node
+        for (i in 0 until node.childCount) {
+            val found = findEditableNode(node.getChild(i) ?: continue)
+            if (found != null) return found
+        }
+        return null
+    }
+
     private fun collectText(node: AccessibilityNodeInfo, sb: StringBuilder) {
         if (!node.text.isNullOrEmpty()) sb.append(node.text).append(" ")
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            collectText(child, sb)
-        }
+        for (i in 0 until node.childCount) collectText(node.getChild(i) ?: continue, sb)
+    }
+
+    fun triggerEmergencyStop() {
+        emergencyStop.value = true
+        isRunning.value = false
+        currentStep.value = null
+        Log.w(TAG, "🛑 Emergency stop!")
     }
 }

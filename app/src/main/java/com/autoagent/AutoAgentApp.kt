@@ -14,6 +14,7 @@ import javax.inject.Inject
 
 @HiltAndroidApp
 class AutoAgentApp : Application(), Configuration.Provider {
+
     @Inject lateinit var workerFactory: HiltWorkerFactory
 
     override fun onCreate() {
@@ -27,12 +28,14 @@ class AutoAgentApp : Application(), Configuration.Provider {
             try {
                 val sw = StringWriter()
                 throwable.printStackTrace(PrintWriter(sw))
-                val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault()).format(Date())
-                val logFile = File(filesDir, "crash_logs/crash_$timestamp.txt")
-                logFile.parentFile?.mkdirs()
-                logFile.writeText("Time: $timestamp\nException: ${throwable::class.java.simpleName}\nMessage: ${throwable.message}\n\n$sw")
+                val ts = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault()).format(Date())
+                val f = File(filesDir, "crash_logs/crash_$ts.txt")
+                f.parentFile?.mkdirs()
+                f.writeText("Thread: ${thread.name}\n${throwable::class.java.name}: ${throwable.message}\n\n$sw")
                 Log.e("AutoAgent_CRASH", "Crash on ${thread.name}", throwable)
-            } catch (e: Exception) { Log.e("AutoAgent", "Could not save crash", e) }
+            } catch (e: Exception) {
+                Log.e("AutoAgent", "Cannot save crash", e)
+            }
             defaultHandler?.uncaughtException(thread, throwable)
         }
     }

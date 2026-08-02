@@ -1,12 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    ACCESSIBILITY SERVICE CONFIG
+    Valid for Android 10+ (API 29+)
+
+    Key requirements:
+    - accessibilityEventTypes: typeAllMask catches all events
+    - canRetrieveWindowContent: true required for reading screen
+    - canPerformGestures: true required for tapping
+    - description string must exist in strings.xml
+    - settingsActivity points to MainActivity
+-->
 <accessibility-service
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/accessibility_description"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagReportViewIds|flagRequestFilterKeyEvents|flagRetrieveInteractiveWindows"
-    android:canPerformGestures="true"
-    android:canRetrieveWindowContent="true"
     android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
+    android:canRequestFilterKeyEvents="true"
     android:canRequestEnhancedWebAccessibility="true"
-    android:canRequestFilterKeyEvents="true" />
+    android:accessibilityFlags="flagReportViewIds|flagRequestFilterKeyEvents|flagRetrieveInteractiveWindows"
+    android:settingsActivity="com.autoagent.personal.presentation.MainActivity" />

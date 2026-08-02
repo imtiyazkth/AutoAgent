@@ -1,17 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
+    <!-- Scheduling -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- App scanning -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Security -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
     <application
         android:name=".AutoAgentApp"
         android:allowBackup="false"
@@ -21,6 +30,8 @@
         android:roundIcon="@android:drawable/sym_def_app_icon"
         android:supportsRtl="true"
         tools:targetApi="34">
+
+        <!-- Main Activity -->
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true"
@@ -31,25 +42,41 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            ACCESSIBILITY SERVICE — CRITICAL RULES:
+            1. exported="false" (not true — security requirement)
+            2. permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            3. intent-filter action = "android.accessibilityservice.AccessibilityService" (not notification listener)
+            4. meta-data name = "android.accessibilityservice"
+            5. NO @AndroidEntryPoint on the service class
+        -->
         <service
             android:name=".service.accessibility.AutoAgentAccessibilityService"
-            android:exported="true"
+            android:exported="false"
             android:enabled="true"
-            android:label="AutoAgent Automation"
+            android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
-                <action android:name="android.service.accessibility.AccessibilityService" />
+                <action android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
-        <receiver android:name=".service.BootReceiver" android:exported="true" android:enabled="true">
+
+        <!-- Boot Receiver -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="true"
+            android:enabled="true">
             <intent-filter android:priority="1000">
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </receiver>
+
+        <!-- WorkManager -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
@@ -60,5 +87,6 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
     </application>
 </manifest>

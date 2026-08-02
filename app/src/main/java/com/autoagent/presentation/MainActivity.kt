@@ -16,8 +16,8 @@ import com.autoagent.presentation.applist.AppListScreen
 import com.autoagent.presentation.dashboard.DashboardScreen
 import com.autoagent.presentation.diagnostics.DiagnosticsScreen
 import com.autoagent.presentation.setup.AccessibilitySetupScreen
+import com.autoagent.presentation.setup.isAccessibilityEnabled
 import com.autoagent.presentation.taskbuilder.TaskBuilderScreen
-import com.autoagent.util.AccessibilityHelper
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -41,43 +41,41 @@ fun AppNavigation() {
     var screen by remember { mutableStateOf("dashboard") }
     var selectedApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
 
-    // Check accessibility on every resume
-    var accessibilityEnabled by remember {
-        mutableStateOf(AccessibilityHelper.isAccessibilityEnabled(context))
-    }
-
-    LaunchedEffect(screen) {
-        accessibilityEnabled = AccessibilityHelper.isAccessibilityEnabled(context)
+    // Safe navigation helper
+    fun navigate(to: String) {
+        try { screen = to } catch (e: Exception) {
+            Log.e("AutoAgent_Nav", "Navigation error to $to: ${e.message}")
+            screen = "dashboard"
+        }
     }
 
     when (screen) {
         "dashboard" -> DashboardScreen(
-            onAddTask = {
-                try { selectedApp = null; screen = "app_list" }
-                catch (e: Exception) { Log.e("Nav", e.message ?: "") }
-            },
-            onEditTask = { screen = "add_task" },
-            onViewLogs = {},
-            onDiagnostics = { screen = "diagnostics" },
-            onSetupAccessibility = { screen = "accessibility_setup" },
+            onAddTask = { selectedApp = null; navigate("app_list") },
+            onEditTask = { navigate("add_task") },
+            onViewLogs = { /* TODO */ },
+            onDiagnostics = { navigate("diagnostics") },
+            onSetupAccessibility = { navigate("accessibility_setup") }
         )
         "app_list" -> AppListScreen(
             onAppSelected = { app ->
-                try { selectedApp = app; screen = "add_task" }
-                catch (e: Exception) { screen = "dashboard" }
+                selectedApp = app
+                navigate("add_task")
             },
-            onBack = { selectedApp = null; screen = "dashboard" }
+            onBack = { selectedApp = null; navigate("dashboard") }
         )
         "add_task" -> TaskBuilderScreen(
             preSelectedApp = selectedApp,
-            onBack = { selectedApp = null; screen = "dashboard" },
-            onPickApp = { screen = "app_list" }
+            onBack = { selectedApp = null; navigate("dashboard") },
+            onPickApp = { navigate("app_list") }
         )
-        "diagnostics" -> DiagnosticsScreen(onBack = { screen = "dashboard" })
+        "diagnostics" -> DiagnosticsScreen(
+            onBack = { navigate("dashboard") }
+        )
         "accessibility_setup" -> AccessibilitySetupScreen(
-            onDone = { screen = "dashboard" },
-            onSkip = { screen = "dashboard" }
+            onDone = { navigate("dashboard") },
+            onSkip = { navigate("dashboard") }
         )
-        else -> { screen = "dashboard" }
+        else -> { navigate("dashboard") }
     }
 }

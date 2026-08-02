@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AutoAgent</string>
-    <string name="accessibility_description">AutoAgent aapke liye scheduled automation tasks run karta hai — bilkul transparent, user-controlled, aur reversible.</string>
+    <string name="accessibility_service_label">AutoAgent Automation</string>
+    <string name="accessibility_description">AutoAgent aapke phone mein scheduled automation tasks run karta hai. Ye service apps launch karne, text type karne, aur buttons tap karne mein madad karta hai. Aap kabhi bhi is service ko band kar sakte hain.</string>
 </resources>
