@@ -1,19 +1,32 @@
 #!/bin/sh
+# Gradle Wrapper Script
 
-# AutoAgent gradlew wrapper
-# Works in both Termux (uses system gradle) and GitHub Actions (uses gradle wrapper)
+APP_HOME="$(cd "$(dirname "$0")" && pwd)"
+GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
+GRADLE_VERSION="8.4"
+DIST_URL="https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip"
+DIST_DIR="$GRADLE_USER_HOME/wrapper/dists/gradle-${GRADLE_VERSION}-bin"
+GRADLE_BIN="$DIST_DIR/gradle-${GRADLE_VERSION}/bin/gradle"
 
-# Try wrapper first (GitHub Actions)
-GRADLE_WRAPPER="$(dirname "$0")/gradle/wrapper/gradle-wrapper.jar"
-
-if [ -f "$GRADLE_WRAPPER" ]; then
-    exec java -jar "$GRADLE_WRAPPER" "$@"
+# Download if not cached
+if [ ! -f "$GRADLE_BIN" ]; then
+    echo "Downloading Gradle $GRADLE_VERSION..."
+    mkdir -p "$DIST_DIR"
+    ZIP="$DIST_DIR/gradle-${GRADLE_VERSION}-bin.zip"
+    
+    if command -v curl >/dev/null 2>&1; then
+        curl -L -o "$ZIP" "$DIST_URL" --silent --show-error
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -O "$ZIP" "$DIST_URL"
+    else
+        echo "ERROR: curl or wget required"
+        exit 1
+    fi
+    
+    echo "Extracting Gradle $GRADLE_VERSION..."
+    unzip -q "$ZIP" -d "$DIST_DIR"
+    rm -f "$ZIP"
+    chmod +x "$GRADLE_BIN"
 fi
 
-# Fallback to system gradle (Termux)
-if command -v gradle >/dev/null 2>&1; then
-    exec gradle "$@"
-fi
-
-echo "ERROR: Neither gradle wrapper nor system gradle found"
-exit 1
+exec "$GRADLE_BIN" "$@"
