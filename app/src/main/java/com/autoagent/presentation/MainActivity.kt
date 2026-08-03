@@ -16,7 +16,7 @@ import com.autoagent.presentation.applist.AppListScreen
 import com.autoagent.presentation.dashboard.DashboardScreen
 import com.autoagent.presentation.diagnostics.DiagnosticsScreen
 import com.autoagent.presentation.setup.AccessibilitySetupScreen
-import com.autoagent.presentation.setup.isAccessibilityEnabled
+
 import com.autoagent.presentation.taskbuilder.TaskBuilderScreen
 import dagger.hilt.android.AndroidEntryPoint
 

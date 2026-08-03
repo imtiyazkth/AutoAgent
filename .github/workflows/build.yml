@@ -25,22 +25,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Add gradle.properties
-        run: |
-          echo "android.useAndroidX=true" >> gradle.properties
-          echo "android.enableJetifier=true" >> gradle.properties
-          echo "org.gradle.jvmargs=-Xmx2048m" >> gradle.properties
-
       - name: Build Debug APK
-        # KEY FIX: ./gradlew not gradle
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --no-daemon
 
-      - name: Verify APK exists
-        run: |
-          ls -la app/build/outputs/apk/debug/
-          echo "APK size: $(du -sh app/build/outputs/apk/debug/app-debug.apk)"
-
-      - name: Upload Debug APK
+      - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: AutoAgent-debug-apk
