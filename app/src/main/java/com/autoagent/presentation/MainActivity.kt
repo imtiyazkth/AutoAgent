@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,33 +13,29 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.autoagent.domain.model.InstalledAppInfo
 import com.autoagent.presentation.applist.AppListScreen
 import com.autoagent.presentation.dashboard.DashboardScreen
+import com.autoagent.presentation.dashboard.DashboardViewModel
 import com.autoagent.presentation.diagnostics.DiagnosticsScreen
 import com.autoagent.presentation.setup.AccessibilitySetupScreen
 import com.autoagent.presentation.taskbuilder.TaskBuilderScreen
+import com.autoagent.util.L
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    // Permission launcher
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        Log.d("AutoAgent", "Permissions result: $permissions")
-    }
+    ) { perms -> L.d("MainActivity", "Permissions: $perms") }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
-        // Request permissions on start
-        requestRequiredPermissions()
-
+        requestPerms()
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -50,82 +45,80 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun requestRequiredPermissions() {
-        val permissions = mutableListOf<String>()
-
-        // Notifications (Android 13+)
+    private fun requestPerms() {
+        val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                permissions.add(Manifest.permission.POST_NOTIFICATIONS)
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                needed.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-
-        if (permissions.isNotEmpty()) {
-            permissionLauncher.launch(permissions.toTypedArray())
-        }
+        if (needed.isNotEmpty()) permissionLauncher.launch(needed.toTypedArray())
     }
 }
 
 @Composable
 fun AppNavigation() {
+    // ViewModel at TOP LEVEL — survives screen changes
+    val dashboardViewModel: DashboardViewModel = hiltViewModel()
+    val uiState by dashboardViewModel.uiState.collectAsState()
+
     var screen by remember { mutableStateOf("dashboard") }
     var selectedApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
 
-    fun navigate(to: String) {
+    // KEY FIX: LaunchedEffect here at top level — NEVER cancelled
+    // This fires whenever navigateTo changes, regardless of which screen is showing
+    LaunchedEffect(uiState.navigateTo) {
+        val target = uiState.navigateTo ?: return@LaunchedEffect
+        L.d("AppNavigation", "navigateTo=$target, current screen=$screen")
         try {
-            screen = to
+            when (target) {
+                "add_task" -> {
+                    selectedApp = null
+                    screen = "app_list"
+                }
+                "edit_task" -> {
+                    screen = "add_task"
+                }
+            }
         } catch (e: Exception) {
-            Log.e("AutoAgent", "Nav error: ${e.message}")
-            screen = "dashboard"
+            L.e("AppNavigation", "Navigation error", e)
+        } finally {
+            // Always clear after handling
+            dashboardViewModel.onNavigationHandled()
         }
     }
 
     when (screen) {
         "dashboard" -> DashboardScreen(
-            onAddTask = {
-                try {
-                    selectedApp = null
-                    navigate("app_list")
-                } catch (e: Exception) {
-                    Log.e("AutoAgent", "onAddTask error: ${e.message}")
-                }
-            },
-            onEditTask = { navigate("add_task") },
+            viewModel = dashboardViewModel,
             onViewLogs = {},
-            onDiagnostics = { navigate("diagnostics") },
-            onSetupAccessibility = { navigate("accessibility_setup") }
+            onDiagnostics = { screen = "diagnostics" },
+            onSetupAccessibility = { screen = "accessibility_setup" }
         )
         "app_list" -> AppListScreen(
             onAppSelected = { app ->
-                try {
-                    selectedApp = app
-                    navigate("add_task")
-                } catch (e: Exception) {
-                    Log.e("AutoAgent", "App select error: ${e.message}")
-                    navigate("dashboard")
-                }
+                L.d("AppNavigation", "App selected: ${app.packageName}")
+                selectedApp = app
+                screen = "add_task"
             },
-            onBack = {
-                selectedApp = null
-                navigate("dashboard")
-            }
+            onBack = { selectedApp = null; screen = "dashboard" }
         )
         "add_task" -> TaskBuilderScreen(
             preSelectedApp = selectedApp,
-            onBack = {
-                selectedApp = null
-                navigate("dashboard")
-            },
-            onPickApp = { navigate("app_list") }
+            onBack = { selectedApp = null; screen = "dashboard" },
+            onPickApp = { screen = "app_list" }
         )
         "diagnostics" -> DiagnosticsScreen(
-            onBack = { navigate("dashboard") }
+            onBack = { screen = "dashboard" }
         )
         "accessibility_setup" -> AccessibilitySetupScreen(
-            onDone = { navigate("dashboard") },
-            onSkip = { navigate("dashboard") }
+            onDone = { screen = "dashboard" },
+            onSkip = { screen = "dashboard" }
         )
-        else -> navigate("dashboard")
+        else -> {
+            L.e("AppNavigation", "Unknown screen: $screen")
+            screen = "dashboard"
+        }
     }
 }
