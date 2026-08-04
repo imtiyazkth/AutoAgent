@@ -28,9 +28,9 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private val permissionLauncher = registerForActivityResult(
+    private val permLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { perms -> L.d("MainActivity", "Permissions: $perms") }
+    ) { L.d("MainActivity", "Perms: $it") }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,52 +53,39 @@ class MainActivity : ComponentActivity() {
                 needed.add(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
-        if (needed.isNotEmpty()) permissionLauncher.launch(needed.toTypedArray())
+        if (needed.isNotEmpty()) permLauncher.launch(needed.toTypedArray())
     }
 }
 
 @Composable
 fun AppNavigation() {
-    // ViewModel at TOP LEVEL — survives screen changes
-    val dashboardViewModel: DashboardViewModel = hiltViewModel()
-    val uiState by dashboardViewModel.uiState.collectAsState()
+    val dashVM: DashboardViewModel = hiltViewModel()
+    val uiState by dashVM.uiState.collectAsState()
 
     var screen by remember { mutableStateOf("dashboard") }
     var selectedApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
 
-    // KEY FIX: LaunchedEffect here at top level — NEVER cancelled
-    // This fires whenever navigateTo changes, regardless of which screen is showing
+    // Navigation — state based at top level, never cancelled
     LaunchedEffect(uiState.navigateTo) {
         val target = uiState.navigateTo ?: return@LaunchedEffect
-        L.d("AppNavigation", "navigateTo=$target, current screen=$screen")
-        try {
-            when (target) {
-                "add_task" -> {
-                    selectedApp = null
-                    screen = "app_list"
-                }
-                "edit_task" -> {
-                    screen = "add_task"
-                }
-            }
-        } catch (e: Exception) {
-            L.e("AppNavigation", "Navigation error", e)
-        } finally {
-            // Always clear after handling
-            dashboardViewModel.onNavigationHandled()
+        L.d("AppNav", "navigateTo=$target")
+        when {
+            target == "add_task" -> { selectedApp = null; screen = "app_list" }
+            target.startsWith("edit_task_") -> screen = "add_task"
         }
+        dashVM.onNavigationHandled()
     }
 
     when (screen) {
         "dashboard" -> DashboardScreen(
-            viewModel = dashboardViewModel,
+            viewModel = dashVM,
             onViewLogs = {},
             onDiagnostics = { screen = "diagnostics" },
             onSetupAccessibility = { screen = "accessibility_setup" }
         )
         "app_list" -> AppListScreen(
             onAppSelected = { app ->
-                L.d("AppNavigation", "App selected: ${app.packageName}")
+                L.d("AppNav", "App picked: ${app.packageName}")
                 selectedApp = app
                 screen = "add_task"
             },
@@ -107,18 +94,21 @@ fun AppNavigation() {
         "add_task" -> TaskBuilderScreen(
             preSelectedApp = selectedApp,
             onBack = { selectedApp = null; screen = "dashboard" },
-            onPickApp = { screen = "app_list" }
+            onPickApp = { screen = "app_list" },
+            onSaved = {
+                L.d("AppNav", "Task saved, back to dashboard")
+                selectedApp = null
+                screen = "dashboard"
+                dashVM.uiState.value.let {
+                    // Show success message
+                }
+            }
         )
-        "diagnostics" -> DiagnosticsScreen(
-            onBack = { screen = "dashboard" }
-        )
+        "diagnostics" -> DiagnosticsScreen(onBack = { screen = "dashboard" })
         "accessibility_setup" -> AccessibilitySetupScreen(
             onDone = { screen = "dashboard" },
             onSkip = { screen = "dashboard" }
         )
-        else -> {
-            L.e("AppNavigation", "Unknown screen: $screen")
-            screen = "dashboard"
-        }
+        else -> { screen = "dashboard" }
     }
 }

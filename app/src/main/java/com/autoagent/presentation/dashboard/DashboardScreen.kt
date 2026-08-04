@@ -105,7 +105,7 @@ fun DashboardScreen(
             ExtendedFloatingActionButton(
                 onClick = {
                     L.d("DashboardScreen", "FAB + tapped")
-                    viewModel.requestAddTask()
+                    viewModel.openAddTask()
                 },
                 icon = { Icon(Icons.Filled.Add, null) },
                 text = { Text("Naya Task") }
@@ -230,7 +230,7 @@ fun DashboardScreen(
                         Spacer(Modifier.height(16.dp))
                         Button(onClick = {
                             L.d("DashboardScreen", "Pehla Task button tapped")
-                            viewModel.requestAddTask()
+                            viewModel.openAddTask()
                         }) { Text("Pehla Task Banao") }
                     }
                 }
