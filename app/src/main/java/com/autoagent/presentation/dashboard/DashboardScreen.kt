@@ -245,7 +245,7 @@ fun DashboardScreen(
                         task = task,
                         onToggle = { viewModel.requestToggle(task.id) },
                         onRun = { viewModel.requestRun(task.id) },
-                        onEdit = { viewModel.requestEditTask(task.id) },
+                        onEdit = { viewModel.openEditTask(task.id) },
                         onDelete = { viewModel.requestDelete(task.id) }
                     )
                 }
