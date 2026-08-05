@@ -150,14 +150,17 @@ class DashboardViewModel @Inject constructor(
             val correct = runCatching { pinManager.verifyPin(pin) }.getOrDefault(false)
             L.d("DashboardVM", "verifyPin correct=$correct")
             if (correct) {
-                val s = _state.value
+                // Snapshot IDs before clearing state
+                val pendingDelete = _state.value.pendingDeleteId
+                val pendingToggle = _state.value.pendingToggleId
+                val pendingRun = _state.value.pendingRunId
                 _state.update { it.copy(showPinVerify = false, pinError = null,
                     pendingDeleteId = null, pendingRunId = null, pendingToggleId = null) }
-                // Execute pending action
-                s.pendingDeleteId?.let { deleteTask(it) }
-                s.pendingToggleId?.let { toggleTask(it) }
-                s.pendingRunId?.let { runTask(it) }
+                pendingDelete?.let { deleteTask(it) }
+                pendingToggle?.let { toggleTask(it) }
+                pendingRun?.let { runTask(it) }
             } else {
+                L.d("DashboardVM", "Wrong PIN entered")
                 _state.update { it.copy(pinError = "Galat PIN — dobara try karo") }
             }
         }
@@ -186,12 +189,17 @@ class DashboardViewModel @Inject constructor(
     }
 
     private suspend fun runTask(id: Long) {
+        if (AutoAgentAccessibilityService.isRunning.value) {
+            L.d("DashboardVM", "runTask blocked — service already running")
+            _state.update { it.copy(error = "Ek task pehle se chal raha hai — ruko ya Stop dabao") }
+            return
+        }
         runCatching {
             val entity = repository.getTask(id) ?: run {
-                _state.update { it.copy(error = "Task nahi mila") }; return
+                _state.update { it.copy(error = "Task nahi mila (id=$id)") }; return
             }
             val svc = AutoAgentAccessibilityService.getInstance() ?: run {
-                _state.update { it.copy(error = "Accessibility ON karo: Settings → Accessibility → AutoAgent → ON") }; return
+                _state.update { it.copy(error = "Accessibility ON karo:\nSettings → Accessibility → AutoAgent → ON\n\nPhir wapas aao aur Run karo.") }; return
             }
             val logs = mutableListOf<StepLog>()
             val status = svc.executeSteps(gsonHelper.entityToTask(entity).steps) { logs.add(it) }

@@ -31,8 +31,10 @@ import com.autoagent.service.accessibility.AutoAgentAccessibilityService
 import com.autoagent.util.PinManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import android.content.pm.PackageManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import java.text.SimpleDateFormat
@@ -144,7 +146,21 @@ class DiagnosticsViewModel @Inject constructor(
                 settingsUri = "package:${context.packageName}"
             ))
 
-            // 7. Package details
+            // 7. Notification permission (Android 13+)
+            val notifOk = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                        PackageManager.PERMISSION_GRANTED
+            } else true
+            results.add(DiagItem(
+                title = "Notification Permission",
+                status = if (notifOk) DiagStatus.OK else DiagStatus.WARNING,
+                detail = if (notifOk) "Notifications allowed ✅" else "Not granted — task alerts nahi aayenge",
+                fixLabel = if (!notifOk) "App Settings" else "",
+                settingsAction = Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                settingsUri = "package:\${context.packageName}"
+            ))
+
+            // 8. Package details
             results.add(DiagItem(
                 title = "Package Name",
                 status = DiagStatus.OK,
@@ -157,18 +173,16 @@ class DiagnosticsViewModel @Inject constructor(
                 detail = "com.autoagent.service.accessibility.AutoAgentAccessibilityService"
             ))
 
-            // 8. Android Version
+            // 9. Android Version
             results.add(DiagItem(
                 title = "Android Version",
                 status = if (Build.VERSION.SDK_INT >= 26) DiagStatus.OK else DiagStatus.ERROR,
                 detail = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) — ${Build.MANUFACTURER} ${Build.MODEL}"
             ))
 
-            // 9. Task count
+            // 10. Task count — FIX: firstOrNull() not collect{} — Room Flow never completes
             val taskCount = try {
-                var count = 0
-                repository.getAllTasks().collect { count = it.size }
-                count
+                repository.getAllTasks().firstOrNull()?.size ?: 0
             } catch (e: Exception) { -1 }
             results.add(DiagItem(
                 title = "Room Database",
@@ -187,6 +201,7 @@ class DiagnosticsViewModel @Inject constructor(
                 "Service Running" to if (serviceRunning) "YES" else "NO",
                 "PIN Set" to if (pinSetup) "YES" else "NO",
                 "Battery OK" to if (batteryOk) "YES" else "NO",
+                "Notifications" to if (notifOk) "YES" else "NO (Android 13+)",
                 "ADB Component" to "${context.packageName}/com.autoagent.service.accessibility.AutoAgentAccessibilityService"
             )
         }

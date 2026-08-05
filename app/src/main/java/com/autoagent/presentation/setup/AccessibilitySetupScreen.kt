@@ -1,10 +1,7 @@
 package com.autoagent.presentation.setup
 
-import android.content.Context
 import android.content.Intent
 import android.provider.Settings
-import android.text.TextUtils
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.autoagent.service.accessibility.AutoAgentAccessibilityService
+import com.autoagent.util.isAccessibilityEnabled
 import kotlinx.coroutines.delay
 
 // =============================================
@@ -41,25 +39,7 @@ private const val ADB_ENABLE_COMMAND =
 private const val ADB_ENABLE_FLAG =
     "adb shell settings put secure accessibility_enabled 1"
 
-fun isAccessibilityEnabled(context: Context): Boolean {
-    return try {
-        val enabledServices = Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-        ) ?: return false
-
-        val colonSplitter = TextUtils.SimpleStringSplitter(':')
-        colonSplitter.setString(enabledServices)
-        while (colonSplitter.hasNext()) {
-            val component = colonSplitter.next()
-            if (component.equals(CORRECT_ADB_COMPONENT, ignoreCase = true)) {
-                return true
-            }
-        }
-        // Also check by package name only
-        enabledServices.contains(context.packageName, ignoreCase = true)
-    } catch (e: Exception) { false }
-}
+// isAccessibilityEnabled imported from com.autoagent.util
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
