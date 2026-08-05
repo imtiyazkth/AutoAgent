@@ -27,9 +27,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      - name: Generate Gradle wrapper JAR
-        run: gradle wrapper --gradle-version 8.4
-
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
         env:
@@ -39,8 +36,10 @@ jobs:
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
           ls -lh $APK
-          unzip -p $APK AndroidManifest.xml | strings | grep -i "accessibility" && echo "✅ Found" || echo "❌ Not found"
-          unzip -l $APK | grep -i "AutoAgentAccessibility" && echo "✅ Service class present" || echo "❌ Missing"
+          unzip -p $APK AndroidManifest.xml | strings | grep -i "accessibility" \
+            && echo "✅ AccessibilityService found in manifest" || echo "❌ Not found"
+          unzip -l $APK | grep -i "AutoAgentAccessibility" \
+            && echo "✅ Service class present in APK" || echo "❌ Service class missing"
 
       - name: Upload Debug APK
         if: success()
