@@ -32,14 +32,20 @@ jobs:
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
 
-      - name: Verify APK contains AccessibilityService
+      - name: Verify APK manifest with aapt
         run: |
           APK=app/build/outputs/apk/debug/app-debug.apk
+          AAPT="${ANDROID_HOME}/build-tools/$(ls ${ANDROID_HOME}/build-tools | sort -V | tail -1)/aapt"
+          echo "=== APK size ==="
           ls -lh $APK
-          unzip -p $APK AndroidManifest.xml | strings | grep -i "accessibility" \
-            && echo "✅ AccessibilityService found in manifest" || echo "❌ Not found"
-          unzip -l $APK | grep -i "AutoAgentAccessibility" \
-            && echo "✅ Service class present in APK" || echo "❌ Service class missing"
+          echo "=== Permissions in merged manifest ==="
+          $AAPT dump permissions $APK
+          echo "=== AccessibilityService in manifest ==="
+          $AAPT dump xmltree $APK AndroidManifest.xml | grep -i "accessibility" \
+            && echo "✅ AccessibilityService present" || echo "❌ AccessibilityService MISSING"
+          echo "=== QUERY_ALL_PACKAGES permission ==="
+          $AAPT dump permissions $APK | grep -i "QUERY_ALL" \
+            && echo "✅ QUERY_ALL_PACKAGES present" || echo "❌ QUERY_ALL_PACKAGES MISSING — app will crash on app list"
 
       - name: Upload Debug APK
         if: success()

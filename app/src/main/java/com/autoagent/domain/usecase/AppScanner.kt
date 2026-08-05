@@ -36,12 +36,13 @@ class AppScanner @Inject constructor(
 
             packages
                 .filter { launchable.contains(it.packageName) }
+                .filter { it.applicationInfo != null }   // null safety: some system entries have no applicationInfo
                 .mapNotNull { pkg ->
                     try {
                         InstalledAppInfo(
                             packageName = pkg.packageName,
                             appName = try {
-                                pm.getApplicationLabel(pkg.applicationInfo).toString()
+                                pm.getApplicationLabel(pkg.applicationInfo!!).toString()
                             } catch (e: Exception) { pkg.packageName },
                             versionName = pkg.versionName ?: "1.0",
                             installDate = pkg.firstInstallTime,

@@ -20,6 +20,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.autoagent.data.db.TaskEntity
+import com.autoagent.domain.model.ActionType
+import com.autoagent.domain.model.TaskStep
 import com.autoagent.data.repository.AgentRepository
 import com.autoagent.domain.model.InstalledAppInfo
 import com.autoagent.util.L
@@ -115,26 +117,61 @@ class TaskBuilderViewModel @Inject constructor(
 
     private suspend fun saveTaskInternal(onSuccess: () -> Unit) {
         try {
-            val steps = mutableListOf<Map<String, Any>>()
+            // FIX: use typed TaskStep objects, NOT raw Map<String,Any>.
+            // Gson deserializes Map<String,Any> with type erasure — Int becomes Double,
+            // causing ClassCastException when TaskStep.id (Int) is read back later.
+            val steps = mutableListOf<TaskStep>()
+            var stepId = 1
+
             pendingApp?.let {
-                steps.add(mapOf("id" to 1, "type" to "LAUNCH_APP",
-                    "targetApp" to it.packageName, "delayMs" to 1500L,
-                    "retryCount" to 2, "description" to "${it.appName} open karo"))
+                steps.add(TaskStep(
+                    id = stepId++,
+                    type = ActionType.LAUNCH_APP,
+                    targetApp = it.packageName,
+                    delayMs = 1500L,
+                    retryCount = 2,
+                    description = "${it.appName} open karo"
+                ))
             }
             if (pendingUrl.isNotBlank()) {
-                steps.add(mapOf("id" to steps.size + 1, "type" to "OPEN_URL",
-                    "targetUrl" to pendingUrl, "delayMs" to 2000L,
-                    "retryCount" to 2, "description" to "URL open karo"))
+                steps.add(TaskStep(
+                    id = stepId++,
+                    type = ActionType.OPEN_URL,
+                    targetUrl = pendingUrl,
+                    delayMs = 2000L,
+                    retryCount = 2,
+                    description = "URL open karo"
+                ))
             }
             if (pendingText.isNotBlank()) {
-                steps.add(mapOf("id" to steps.size + 1, "type" to "ENTER_TEXT",
-                    "inputText" to pendingText, "delayMs" to 1000L,
-                    "retryCount" to 2, "description" to "Text type karo"))
+                steps.add(TaskStep(
+                    id = stepId++,
+                    type = ActionType.ENTER_TEXT,
+                    inputText = pendingText,
+                    delayMs = 1000L,
+                    retryCount = 2,
+                    description = "Text type karo"
+                ))
             }
             if (pendingButton.isNotBlank()) {
-                steps.add(mapOf("id" to steps.size + 1, "type" to "TAP_BUTTON",
-                    "buttonText" to pendingButton, "delayMs" to 500L,
-                    "retryCount" to 3, "description" to "'$pendingButton' tap karo"))
+                steps.add(TaskStep(
+                    id = stepId,
+                    type = ActionType.TAP_BUTTON,
+                    buttonText = pendingButton,
+                    delayMs = 500L,
+                    retryCount = 3,
+                    description = "'$pendingButton' tap karo"
+                ))
+            }
+
+            if (steps.isEmpty()) {
+                // Always add at least a LAUNCH_APP or CONFIRM step so task is not empty
+                steps.add(TaskStep(
+                    id = 1,
+                    type = ActionType.CONFIRM_ACTION,
+                    delayMs = 500L,
+                    description = "Task confirm"
+                ))
             }
 
             repository.saveTask(TaskEntity(
@@ -142,17 +179,22 @@ class TaskBuilderViewModel @Inject constructor(
                 description = pendingDesc,
                 triggerType = pendingTrigger.ifBlank { "MANUAL" },
                 triggerTime = pendingTime.ifBlank { null },
-                triggerDays = "[]", intervalMinutes = 0,
+                triggerDays = "[]",
+                intervalMinutes = 0,
                 stepsJson = Gson().toJson(steps),
                 networkPolicy = "WIFI_PREFERRED",
-                mobileDataAllowed = false, isEnabled = true,
-                requiresConfirmation = false, priority = 1,
+                mobileDataAllowed = false,
+                isEnabled = true,
+                requiresConfirmation = false,
+                priority = 1,
                 createdAt = System.currentTimeMillis(),
-                lastRunAt = null, lastRunStatus = null,
-                totalRuns = 0, successRuns = 0
+                lastRunAt = null,
+                lastRunStatus = null,
+                totalRuns = 0,
+                successRuns = 0
             ))
 
-            L.d("TaskBuilderVM", "Task saved successfully")
+            L.d("TaskBuilderVM", "Task saved: ${steps.size} steps")
             _state.value = _state.value.copy(isSaving = false, savedOk = true)
             onSuccess()
         } catch (e: Exception) {
