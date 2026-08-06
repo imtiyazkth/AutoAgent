@@ -15,8 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.autoagent.domain.model.InstalledAppInfo
-import com.autoagent.presentation.applist.AppListScreen
 import com.autoagent.presentation.dashboard.DashboardScreen
 import com.autoagent.presentation.dashboard.DashboardViewModel
 import com.autoagent.presentation.diagnostics.DiagnosticsScreen
@@ -48,10 +46,10 @@ class MainActivity : ComponentActivity() {
     private fun requestPerms() {
         val needed = mutableListOf<String>()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED) {
-                needed.add(Manifest.permission.POST_NOTIFICATIONS)
-            }
+            if (ContextCompat.checkSelfPermission(
+                    this, Manifest.permission.POST_NOTIFICATIONS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) needed.add(Manifest.permission.POST_NOTIFICATIONS)
         }
         if (needed.isNotEmpty()) permLauncher.launch(needed.toTypedArray())
     }
@@ -63,15 +61,20 @@ fun AppNavigation() {
     val uiState by dashVM.uiState.collectAsState()
 
     var screen by remember { mutableStateOf("dashboard") }
-    var selectedApp by remember { mutableStateOf<InstalledAppInfo?>(null) }
+    var editTaskId by remember { mutableStateOf<Long?>(null) }
 
-    // Navigation — state based at top level, never cancelled
     LaunchedEffect(uiState.navigateTo) {
         val target = uiState.navigateTo ?: return@LaunchedEffect
         L.d("AppNav", "navigateTo=$target")
         when {
-            target == "add_task" -> { selectedApp = null; screen = "app_list" }
-            target.startsWith("edit_task_") -> screen = "add_task"
+            target == "add_task" -> {
+                editTaskId = null
+                screen = "add_task"
+            }
+            target.startsWith("edit_task_") -> {
+                editTaskId = target.removePrefix("edit_task_").toLongOrNull()
+                screen = "add_task"
+            }
         }
         dashVM.onNavigationHandled()
     }
@@ -83,26 +86,10 @@ fun AppNavigation() {
             onDiagnostics = { screen = "diagnostics" },
             onSetupAccessibility = { screen = "accessibility_setup" }
         )
-        "app_list" -> AppListScreen(
-            onAppSelected = { app ->
-                L.d("AppNav", "App picked: ${app.packageName}")
-                selectedApp = app
-                screen = "add_task"
-            },
-            onBack = { selectedApp = null; screen = "dashboard" }
-        )
         "add_task" -> TaskBuilderScreen(
-            preSelectedApp = selectedApp,
-            onBack = { selectedApp = null; screen = "dashboard" },
-            onPickApp = { screen = "app_list" },
-            onSaved = {
-                L.d("AppNav", "Task saved, back to dashboard")
-                selectedApp = null
-                screen = "dashboard"
-                dashVM.uiState.value.let {
-                    // Show success message
-                }
-            }
+            editTaskId = editTaskId,
+            onBack = { editTaskId = null; screen = "dashboard" },
+            onSaved = { editTaskId = null; screen = "dashboard" }
         )
         "diagnostics" -> DiagnosticsScreen(onBack = { screen = "dashboard" })
         "accessibility_setup" -> AccessibilitySetupScreen(
