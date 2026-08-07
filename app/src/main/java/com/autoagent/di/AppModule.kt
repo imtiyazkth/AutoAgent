@@ -17,7 +17,12 @@ object AppModule {
     @Provides
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): AutoAgentDatabase {
-        return Room.databaseBuilder(context, AutoAgentDatabase::class.java, "autoagent_db")
+        return Room.databaseBuilder(
+            context,
+            AutoAgentDatabase::class.java,
+            "autoagent_db"
+        )
+            .addMigrations(AutoAgentDatabase.MIGRATION_1_2)
             .fallbackToDestructiveMigration()
             .build()
     }
@@ -25,4 +30,5 @@ object AppModule {
     @Provides fun provideTaskDao(db: AutoAgentDatabase): TaskDao = db.taskDao()
     @Provides fun provideLogDao(db: AutoAgentDatabase): ExecutionLogDao = db.logDao()
     @Provides fun providePinDao(db: AutoAgentDatabase): PinDao = db.pinDao()
+    @Provides fun provideAppCacheDao(db: AutoAgentDatabase): AppCacheDao = db.appCacheDao()
 }

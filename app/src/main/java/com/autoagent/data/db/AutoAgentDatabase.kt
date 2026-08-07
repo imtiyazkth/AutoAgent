@@ -1,26 +1,48 @@
 package com.autoagent.data.db
 
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.autoagent.domain.model.RunStatus
 import kotlinx.coroutines.flow.Flow
 
-// =============================================
-// DATABASE
-// =============================================
 @Database(
-    entities = [TaskEntity::class, ExecutionLogEntity::class, PinEntity::class],
-    version = 1,
+    entities = [
+        TaskEntity::class,
+        ExecutionLogEntity::class,
+        PinEntity::class,
+        AppCacheEntity::class
+    ],
+    version = 2,
     exportSchema = false
 )
 abstract class AutoAgentDatabase : RoomDatabase() {
     abstract fun taskDao(): TaskDao
     abstract fun logDao(): ExecutionLogDao
     abstract fun pinDao(): PinDao
+    abstract fun appCacheDao(): AppCacheDao
+
+    companion object {
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS app_cache (
+                        packageName TEXT PRIMARY KEY NOT NULL,
+                        appName TEXT NOT NULL,
+                        versionName TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        canLaunch INTEGER NOT NULL DEFAULT 1,
+                        installDate INTEGER NOT NULL DEFAULT 0,
+                        lastUpdated INTEGER NOT NULL DEFAULT 0,
+                        launchActivity TEXT,
+                        scannedAt INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+            }
+        }
+    }
 }
 
-// =============================================
-// TASK ENTITY
-// =============================================
 @Entity(tableName = "tasks")
 data class TaskEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -28,9 +50,9 @@ data class TaskEntity(
     val description: String,
     val triggerType: String,
     val triggerTime: String?,
-    val triggerDays: String,          // JSON "[0,1,2]"
+    val triggerDays: String,
     val intervalMinutes: Int,
-    val stepsJson: String,            // Full steps as JSON
+    val stepsJson: String,
     val networkPolicy: String,
     val mobileDataAllowed: Boolean,
     val isEnabled: Boolean,
@@ -73,9 +95,6 @@ interface TaskDao {
     suspend fun getCount(): Int
 }
 
-// =============================================
-// EXECUTION LOG ENTITY
-// =============================================
 @Entity(tableName = "execution_logs")
 data class ExecutionLogEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -88,7 +107,7 @@ data class ExecutionLogEntity(
     val totalSteps: Int,
     val failureReason: String?,
     val networkUsed: String?,
-    val stepLogsJson: String          // JSON array of step results
+    val stepLogsJson: String
 )
 
 @Dao
@@ -99,17 +118,11 @@ interface ExecutionLogDao {
     @Query("SELECT * FROM execution_logs WHERE taskId = :taskId ORDER BY startTime DESC LIMIT 50")
     fun getLogsForTask(taskId: Long): Flow<List<ExecutionLogEntity>>
 
-    @Query("SELECT * FROM execution_logs WHERE status = 'FAILED' ORDER BY startTime DESC LIMIT 50")
-    fun getFailedLogs(): Flow<List<ExecutionLogEntity>>
-
     @Insert
     suspend fun insert(log: ExecutionLogEntity): Long
 
     @Query("UPDATE execution_logs SET endTime = :endTime, status = :status, stepsCompleted = :steps, failureReason = :reason WHERE id = :id")
     suspend fun updateResult(id: Long, endTime: Long, status: String, steps: Int, reason: String?)
-
-    @Query("DELETE FROM execution_logs WHERE startTime < :cutoff")
-    suspend fun deleteOlderThan(cutoff: Long)
 
     @Query("SELECT COUNT(*) FROM execution_logs WHERE status = 'SUCCESS'")
     suspend fun getSuccessCount(): Int
@@ -118,13 +131,10 @@ interface ExecutionLogDao {
     suspend fun getFailCount(): Int
 }
 
-// =============================================
-// PIN ENTITY — stores SHA-256 hash only
-// =============================================
 @Entity(tableName = "pin_config")
 data class PinEntity(
     @PrimaryKey val id: Int = 1,
-    val pinHash: String,              // SHA-256 of 10-digit PIN
+    val pinHash: String,
     val biometricEnabled: Boolean = false,
     val setupComplete: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),

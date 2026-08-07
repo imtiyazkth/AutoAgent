@@ -2,9 +2,9 @@ package com.autoagent.domain.usecase
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import com.autoagent.domain.model.InstalledAppInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -14,51 +14,115 @@ import javax.inject.Singleton
 class AppScanner @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    companion object {
+        private const val TAG = "AppScanner"
+    }
+
     fun scanInstalledApps(): List<InstalledAppInfo> {
         return try {
             val pm = context.packageManager
+
+            // Step 1: get launchable packages via CATEGORY_LAUNCHER
+            // This does NOT require QUERY_ALL_PACKAGES
             val launchIntent = Intent(Intent.ACTION_MAIN, null).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            val launchable = try {
+            val launchable: Set<String> = try {
                 pm.queryIntentActivities(launchIntent, 0)
-                    .map { it.activityInfo.packageName }.toSet()
-            } catch (e: Exception) { emptySet() }
+                    .mapNotNull { it.activityInfo?.packageName }
+                    .toSet()
+            } catch (e: Exception) {
+                Log.e(TAG, "queryIntentActivities failed: ${e.message}")
+                emptySet()
+            }
 
+            Log.d(TAG, "Found ${launchable.size} launchable packages")
+
+            if (launchable.isEmpty()) {
+                Log.w(TAG, "No launchable apps found — returning empty list")
+                return emptyList()
+            }
+
+            // Step 2: get package details only for launchable apps
             val packages = try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(0))
+                    pm.getInstalledPackages(
+                        PackageManager.PackageInfoFlags.of(0)
+                    )
                 } else {
                     @Suppress("DEPRECATION")
                     pm.getInstalledPackages(0)
                 }
-            } catch (e: Exception) { emptyList() }
+            } catch (e: SecurityException) {
+                Log.e(TAG, "getInstalledPackages SecurityException: ${e.message}")
+                // Fallback: build list from launchable only
+                return launchable.mapNotNull { pkg ->
+                    buildAppInfoFromPackageName(pm, pkg)
+                }.sortedBy { it.appName }
+            } catch (e: Exception) {
+                Log.e(TAG, "getInstalledPackages failed: ${e.message}")
+                return launchable.mapNotNull { pkg ->
+                    buildAppInfoFromPackageName(pm, pkg)
+                }.sortedBy { it.appName }
+            }
 
+            // Step 3: filter + map with per-item null safety
             packages
                 .filter { launchable.contains(it.packageName) }
-                .filter { it.applicationInfo != null }   // null safety: some system entries have no applicationInfo
+                .filter { it.applicationInfo != null } // CRITICAL: null guard for MIUI
                 .mapNotNull { pkg ->
                     try {
+                        val appInfo = pkg.applicationInfo ?: return@mapNotNull null
                         InstalledAppInfo(
                             packageName = pkg.packageName,
                             appName = try {
-                                pm.getApplicationLabel(pkg.applicationInfo!!).toString()
+                                pm.getApplicationLabel(appInfo).toString()
                             } catch (e: Exception) { pkg.packageName },
                             versionName = pkg.versionName ?: "1.0",
                             installDate = pkg.firstInstallTime,
                             lastUpdated = pkg.lastUpdateTime,
-                            canLaunch = launchable.contains(pkg.packageName),
+                            canLaunch = true,
                             category = detectCategory(pkg.packageName),
                             launchActivity = try {
                                 pm.getLaunchIntentForPackage(pkg.packageName)
                                     ?.component?.className
                             } catch (e: Exception) { null }
                         )
-                    } catch (e: Exception) { null }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Skipping ${pkg.packageName}: ${e.message}")
+                        null // skip broken entries silently
+                    }
                 }
                 .sortedBy { it.appName }
+
         } catch (e: Exception) {
+            Log.e(TAG, "scanInstalledApps total failure: ${e.message}")
             emptyList()
+        }
+    }
+
+    // Fallback: build InstalledAppInfo just from package name
+    private fun buildAppInfoFromPackageName(
+        pm: PackageManager,
+        packageName: String
+    ): InstalledAppInfo? {
+        return try {
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            InstalledAppInfo(
+                packageName = packageName,
+                appName = pm.getApplicationLabel(appInfo).toString(),
+                versionName = "?",
+                installDate = 0L,
+                lastUpdated = 0L,
+                canLaunch = true,
+                category = detectCategory(packageName),
+                launchActivity = try {
+                    pm.getLaunchIntentForPackage(packageName)?.component?.className
+                } catch (e: Exception) { null }
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "buildAppInfoFromPackageName failed for $packageName: ${e.message}")
+            null
         }
     }
 

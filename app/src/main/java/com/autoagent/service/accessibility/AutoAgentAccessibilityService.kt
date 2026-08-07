@@ -17,20 +17,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/**
- * CRITICAL: Do NOT use @AndroidEntryPoint on AccessibilityService.
- * Hilt injection on AccessibilityService causes silent registration failure
- * on Android 10+ and MIUI devices.
- * Use companion object for shared state instead.
- */
 class AutoAgentAccessibilityService : AccessibilityService() {
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     companion object {
-        private val TAG = "AutoAgent_Accessibility"
+        private const val TAG = "AutoAgent_A11y"
 
-        // Shared state observable by UI
         val isRunning = MutableStateFlow(false)
         val currentStep = MutableStateFlow<String?>(null)
         val emergencyStop = MutableStateFlow(false)
@@ -38,34 +31,43 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         val lastConnectedTime = MutableStateFlow<Long?>(null)
         val lastError = MutableStateFlow<String?>(null)
 
+        @Volatile
         private var instance: AutoAgentAccessibilityService? = null
 
         fun getInstance(): AutoAgentAccessibilityService? = instance
-
         fun isAvailable(): Boolean = instance != null && isServiceConnected.value
+
+        // Called by UI to attempt reconnect detection
+        fun checkConnection(): Boolean {
+            val alive = instance != null && isServiceConnected.value
+            if (!alive && instance != null) {
+                // instance exists but flag is stale — fix it
+                isServiceConnected.value = true
+            }
+            return isServiceConnected.value
+        }
     }
 
-    // =========================================
-    // LIFECYCLE
-    // =========================================
     override fun onServiceConnected() {
+        // Run on main thread — safe for StateFlow
         instance = this
         isServiceConnected.value = true
         lastConnectedTime.value = System.currentTimeMillis()
         lastError.value = null
-        Log.i(TAG, "✅ AutoAgent Accessibility Service connected!")
+        Log.i(TAG, "✅ Service connected — instance set")
     }
 
     override fun onUnbind(intent: Intent?): Boolean {
+        Log.i(TAG, "Service unbound")
         instance = null
         isServiceConnected.value = false
         isRunning.value = false
         currentStep.value = null
-        Log.i(TAG, "AutoAgent Accessibility Service disconnected")
         return super.onUnbind(intent)
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "Service destroyed")
         instance = null
         isServiceConnected.value = false
         isRunning.value = false
@@ -73,18 +75,13 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         super.onDestroy()
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Used for waitForText — handled in executeSteps
-    }
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
     override fun onInterrupt() {
         Log.w(TAG, "Service interrupted")
         isRunning.value = false
     }
 
-    // =========================================
-    // EXECUTE STEPS
-    // =========================================
     suspend fun executeSteps(
         steps: List<TaskStep>,
         onStepDone: (StepLog) -> Unit
@@ -94,9 +91,7 @@ class AutoAgentAccessibilityService : AccessibilityService() {
 
         return try {
             for (step in steps) {
-                if (emergencyStop.value) {
-                    return RunStatus.CANCELLED
-                }
+                if (emergencyStop.value) return RunStatus.CANCELLED
 
                 val desc = step.description.ifEmpty { step.type.displayName }
                 currentStep.value = "${step.type.emoji} $desc"
@@ -159,13 +154,9 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         }
     }
 
-    // =========================================
-    // ACTION IMPLEMENTATIONS
-    // =========================================
     private fun launchApp(packageName: String): Boolean {
         return try {
-            val intent = packageManager.getLaunchIntentForPackage(packageName)
-                ?: return false
+            val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return false
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(intent)
             true
@@ -190,9 +181,7 @@ class AutoAgentAccessibilityService : AccessibilityService() {
     private fun tapByText(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
         val nodes = root.findAccessibilityNodeInfosByText(text)
-        val node = nodes.firstOrNull { it.isClickable }
-            ?: nodes.firstOrNull()
-            ?: return false
+        val node = nodes.firstOrNull { it.isClickable } ?: nodes.firstOrNull() ?: return false
         return performClickOn(node)
     }
 
