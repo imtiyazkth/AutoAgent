@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import com.autoagent.util.CrashLogger
 import dagger.hilt.android.HiltAndroidApp
 import java.io.File
 import java.io.PrintWriter
@@ -19,6 +20,7 @@ class AutoAgentApp : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLogger.init(this)
         setupCrashHandler()
     }
 

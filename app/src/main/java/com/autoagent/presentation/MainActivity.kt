@@ -19,6 +19,7 @@ import com.autoagent.presentation.dashboard.DashboardScreen
 import com.autoagent.presentation.dashboard.DashboardViewModel
 import com.autoagent.presentation.diagnostics.DiagnosticsScreen
 import com.autoagent.presentation.setup.AccessibilitySetupScreen
+import com.autoagent.presentation.ai.AiTaskScreen
 import com.autoagent.presentation.taskbuilder.TaskBuilderScreen
 import com.autoagent.util.L
 import dagger.hilt.android.AndroidEntryPoint
@@ -92,6 +93,15 @@ fun AppNavigation() {
             onSaved = { editTaskId = null; screen = "dashboard" }
         )
         "diagnostics" -> DiagnosticsScreen(onBack = { screen = "dashboard" })
+        "ai_task" -> AiTaskScreen(
+            onBack = { screen = "dashboard" },
+            onTaskParsed = { parsed ->
+                // Navigate to TaskBuilder with pre-filled data
+                editTaskId = null
+                screen = "add_task"
+                // Store parsed task in dashVM for TaskBuilder to pick up
+            }
+        )
         "accessibility_setup" -> AccessibilitySetupScreen(
             onDone = { screen = "dashboard" },
             onSkip = { screen = "dashboard" }

@@ -18,102 +18,74 @@ class AppScanner @Inject constructor(
         private const val TAG = "AppScanner"
     }
 
+    // Must be called on Dispatchers.IO — never on Main
     fun scanInstalledApps(): List<InstalledAppInfo> {
         return try {
             val pm = context.packageManager
 
-            // Step 1: get launchable packages via CATEGORY_LAUNCHER
-            // This does NOT require QUERY_ALL_PACKAGES
-            val launchIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            // Use CATEGORY_LAUNCHER — works without QUERY_ALL_PACKAGES
+            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_LAUNCHER)
             }
-            val launchable: Set<String> = try {
+            val launchableSet: Set<String> = try {
                 pm.queryIntentActivities(launchIntent, 0)
-                    .mapNotNull { it.activityInfo?.packageName }
+                    .mapNotNull { ri -> ri.activityInfo?.packageName?.takeIf { it.isNotBlank() } }
                     .toSet()
             } catch (e: Exception) {
                 Log.e(TAG, "queryIntentActivities failed: ${e.message}")
                 emptySet()
             }
 
-            Log.d(TAG, "Found ${launchable.size} launchable packages")
+            Log.d(TAG, "Found ${launchableSet.size} launchable packages")
+            if (launchableSet.isEmpty()) return emptyList()
 
-            if (launchable.isEmpty()) {
-                Log.w(TAG, "No launchable apps found — returning empty list")
-                return emptyList()
-            }
-
-            // Step 2: get package details only for launchable apps
-            val packages = try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    pm.getInstalledPackages(
-                        PackageManager.PackageInfoFlags.of(0)
-                    )
-                } else {
-                    @Suppress("DEPRECATION")
-                    pm.getInstalledPackages(0)
-                }
-            } catch (e: SecurityException) {
-                Log.e(TAG, "getInstalledPackages SecurityException: ${e.message}")
-                // Fallback: build list from launchable only
-                return launchable.mapNotNull { pkg ->
-                    buildAppInfoFromPackageName(pm, pkg)
-                }.sortedBy { it.appName }
-            } catch (e: Exception) {
-                Log.e(TAG, "getInstalledPackages failed: ${e.message}")
-                return launchable.mapNotNull { pkg ->
-                    buildAppInfoFromPackageName(pm, pkg)
-                }.sortedBy { it.appName }
-            }
-
-            // Step 3: filter + map with per-item null safety
-            packages
-                .filter { launchable.contains(it.packageName) }
-                .filter { it.applicationInfo != null } // CRITICAL: null guard for MIUI
-                .mapNotNull { pkg ->
-                    try {
-                        val appInfo = pkg.applicationInfo ?: return@mapNotNull null
-                        InstalledAppInfo(
-                            packageName = pkg.packageName,
-                            appName = try {
-                                pm.getApplicationLabel(appInfo).toString()
-                            } catch (e: Exception) { pkg.packageName },
-                            versionName = pkg.versionName ?: "1.0",
-                            installDate = pkg.firstInstallTime,
-                            lastUpdated = pkg.lastUpdateTime,
-                            canLaunch = true,
-                            category = detectCategory(pkg.packageName),
-                            launchActivity = try {
-                                pm.getLaunchIntentForPackage(pkg.packageName)
-                                    ?.component?.className
-                            } catch (e: Exception) { null }
-                        )
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Skipping ${pkg.packageName}: ${e.message}")
-                        null // skip broken entries silently
-                    }
-                }
-                .sortedBy { it.appName }
+            // Map each package individually — per-item try/catch prevents one bad
+            // entry from crashing the whole scan (MIUI returns null applicationInfo)
+            launchableSet.mapNotNull { pkg ->
+                buildAppInfo(pm, pkg)
+            }.sortedBy { it.appName }
 
         } catch (e: Exception) {
-            Log.e(TAG, "scanInstalledApps total failure: ${e.message}")
+            Log.e(TAG, "scanInstalledApps failed: ${e.message}")
             emptyList()
         }
     }
 
-    // Fallback: build InstalledAppInfo just from package name
-    private fun buildAppInfoFromPackageName(
-        pm: PackageManager,
-        packageName: String
-    ): InstalledAppInfo? {
+    private fun buildAppInfo(pm: PackageManager, packageName: String): InstalledAppInfo? {
         return try {
-            val appInfo = pm.getApplicationInfo(packageName, 0)
+            // getApplicationInfo works even without QUERY_ALL_PACKAGES for launchable apps
+            val appInfo = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getApplicationInfo(packageName,
+                        PackageManager.ApplicationInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getApplicationInfo(packageName, 0)
+                }
+            } catch (e: PackageManager.NameNotFoundException) {
+                Log.w(TAG, "Package not found: $packageName")
+                return null
+            }
+
+            val appName = try {
+                pm.getApplicationLabel(appInfo).toString().trim().ifBlank { packageName }
+            } catch (e: Exception) { packageName }
+
+            val pkgInfo = try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.getPackageInfo(packageName, 0)
+                }
+            } catch (e: Exception) { null }
+
             InstalledAppInfo(
                 packageName = packageName,
-                appName = pm.getApplicationLabel(appInfo).toString(),
-                versionName = "?",
-                installDate = 0L,
-                lastUpdated = 0L,
+                appName = appName,
+                versionName = pkgInfo?.versionName ?: "?",
+                installDate = pkgInfo?.firstInstallTime ?: 0L,
+                lastUpdated = pkgInfo?.lastUpdateTime ?: 0L,
                 canLaunch = true,
                 category = detectCategory(packageName),
                 launchActivity = try {
@@ -121,32 +93,38 @@ class AppScanner @Inject constructor(
                 } catch (e: Exception) { null }
             )
         } catch (e: Exception) {
-            Log.w(TAG, "buildAppInfoFromPackageName failed for $packageName: ${e.message}")
-            null
+            Log.w(TAG, "buildAppInfo failed for $packageName: ${e.message}")
+            null  // skip — never crash the whole scan
         }
     }
 
     private fun detectCategory(pkg: String): String = when {
-        pkg.contains("chrome") || pkg.contains("firefox") ||
-        pkg.contains("browser") || pkg.contains("opera") -> "Browser"
         pkg.contains("whatsapp") || pkg.contains("telegram") ||
-        pkg.contains("signal") || pkg.contains("messenger") -> "Messaging"
-        pkg.contains("gmail") || pkg.contains("mail") ||
-        pkg.contains("outlook") -> "Email"
-        pkg.contains("youtube") || pkg.contains("netflix") ||
-        pkg.contains("spotify") || pkg.contains("music") -> "Media"
-        pkg.contains("openai") || pkg.contains("anthropic") ||
-        pkg.contains("claude") || pkg.contains("gemini") -> "AI"
+        pkg.contains("signal") || pkg.contains("viber") -> "Messaging"
         pkg.contains("facebook") || pkg.contains("instagram") ||
-        pkg.contains("twitter") || pkg.contains("linkedin") -> "Social"
+        pkg.contains("twitter") || pkg.contains("linkedin") ||
+        pkg.contains("snapchat") || pkg.contains("tiktok") -> "Social"
+        pkg.contains("chrome") || pkg.contains("firefox") ||
+        pkg.contains("opera") || pkg.contains("brave") -> "Browser"
+        pkg.contains("youtube") || pkg.contains("netflix") ||
+        pkg.contains("spotify") || pkg.contains("gaana") -> "Media"
+        pkg.contains("gmail") || pkg.contains("outlook") ||
+        pkg.contains("mail") || pkg.contains("yahoo") -> "Email"
         pkg.contains("maps") || pkg.contains("uber") ||
         pkg.contains("ola") || pkg.contains("rapido") -> "Navigation"
-        pkg.contains("camera") || pkg.contains("gallery") ||
-        pkg.contains("photo") -> "Camera"
-        pkg.contains("clock") || pkg.contains("calendar") ||
-        pkg.contains("alarm") || pkg.contains("notes") -> "Productivity"
+        pkg.contains("openai") || pkg.contains("claude") ||
+        pkg.contains("gemini") || pkg.contains("copilot") -> "AI"
         pkg.contains("bank") || pkg.contains("pay") ||
-        pkg.contains("wallet") || pkg.contains("upi") -> "Finance"
+        pkg.contains("wallet") || pkg.contains("phonepe") ||
+        pkg.contains("gpay") || pkg.contains("paytm") -> "Finance"
+        pkg.contains("camera") || pkg.contains("gallery") ||
+        pkg.contains("photo") || pkg.contains("snapseed") -> "Camera"
+        pkg.contains("zomato") || pkg.contains("swiggy") ||
+        pkg.contains("blinkit") || pkg.contains("bigbasket") -> "Food"
+        pkg.contains("amazon") || pkg.contains("flipkart") ||
+        pkg.contains("myntra") || pkg.contains("meesho") -> "Shopping"
+        pkg.contains("zoom") || pkg.contains("teams") ||
+        pkg.contains("meet") || pkg.contains("skype") -> "Video Call"
         else -> "General"
     }
 }

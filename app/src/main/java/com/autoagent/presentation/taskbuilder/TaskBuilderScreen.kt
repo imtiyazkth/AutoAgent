@@ -126,22 +126,22 @@ class TaskBuilderViewModel @Inject constructor(
     }
 
     fun openAppPicker() {
-        _state.value = _state.value.copy(showAppPicker = true, appListError = null)
+        _state.update { it.copy(showAppPicker = true, appListError = null) }
         // Always try a fresh scan in background
         scanAppsInBackground()
     }
 
     fun closeAppPicker() {
-        _state.value = _state.value.copy(showAppPicker = false, appQuery = "")
+        _state.update { it.copy(showAppPicker = false, appQuery = "") }
     }
 
     fun setAppQuery(q: String) {
-        _state.value = _state.value.copy(appQuery = q)
+        _state.update { it.copy(appQuery = q) }
     }
 
     fun selectApp(app: InstalledAppInfo) {
         pendingApp = app
-        _state.value = _state.value.copy(showAppPicker = false, appQuery = "")
+        _state.update { it.copy(showAppPicker = false, appQuery = "") }
         L.d("TaskBuilderVM", "App selected: ${app.packageName}")
     }
 
@@ -149,7 +149,7 @@ class TaskBuilderViewModel @Inject constructor(
 
     private fun scanAppsInBackground() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(appListLoading = true, appListError = null)
+            _state.update { it.copy(appListLoading = true, appListError = null) }
             try {
                 val apps = withContext(Dispatchers.IO) {
                     appScanner.scanInstalledApps()
@@ -196,11 +196,11 @@ class TaskBuilderViewModel @Inject constructor(
         pendingName = name; pendingDesc = desc
         pendingTrigger = trigger; pendingTime = time; pendingDate = date
         pendingUrl = url; pendingText = text; pendingButton = button
-        _state.value = _state.value.copy(showPinDialog = true, pinError = null)
+        _state.update { it.copy(showPinDialog = true, pinError = null) }
     }
 
     fun dismissPin() {
-        _state.value = _state.value.copy(showPinDialog = false, pinError = null)
+        _state.update { it.copy(showPinDialog = false, pinError = null) }
     }
 
     fun verifyAndSave(pin: String, onSuccess: () -> Unit) {
@@ -269,7 +269,7 @@ class TaskBuilderViewModel @Inject constructor(
                 totalRuns = 0, successRuns = 0
             ))
             L.d("TaskBuilderVM", "Task saved: ${steps.size} steps")
-            _state.value = _state.value.copy(isSaving = false, savedOk = true)
+            _state.update { it.copy(isSaving = false, savedOk = true) }
             onSuccess()
         } catch (e: Exception) {
             L.e("TaskBuilderVM", "saveTask failed", e)
@@ -280,7 +280,7 @@ class TaskBuilderViewModel @Inject constructor(
         }
     }
 
-    fun dismissError() { _state.value = _state.value.copy(saveError = null) }
+    fun dismissError() { _state.update { it.copy(saveError = null) } }
 
     fun filteredApps(): List<InstalledAppInfo> {
         val q = _state.value.appQuery.lowercase().trim()

@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 class AutoAgentAccessibilityService : AccessibilityService() {
 
-    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     companion object {
         private const val TAG = "AutoAgent_A11y"
@@ -31,6 +31,8 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         val lastConnectedTime = MutableStateFlow<Long?>(null)
         val lastError = MutableStateFlow<String?>(null)
 
+        @Volatile
+        @Volatile
         @Volatile
         private var instance: AutoAgentAccessibilityService? = null
 
@@ -157,7 +159,7 @@ class AutoAgentAccessibilityService : AccessibilityService() {
     private fun launchApp(packageName: String): Boolean {
         return try {
             val intent = packageManager.getLaunchIntentForPackage(packageName) ?: return false
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
             startActivity(intent)
             true
         } catch (e: Exception) {
