@@ -32,8 +32,6 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         val lastError = MutableStateFlow<String?>(null)
 
         @Volatile
-        @Volatile
-        @Volatile
         private var instance: AutoAgentAccessibilityService? = null
 
         fun getInstance(): AutoAgentAccessibilityService? = instance
