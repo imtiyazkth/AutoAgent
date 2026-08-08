@@ -3,7 +3,6 @@ package com.autoagent.data.db
 import androidx.room.*
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.autoagent.domain.model.RunStatus
 import kotlinx.coroutines.flow.Flow
 
 @Database(
@@ -126,9 +125,6 @@ interface ExecutionLogDao {
 
     @Query("SELECT COUNT(*) FROM execution_logs WHERE status = 'SUCCESS'")
     suspend fun getSuccessCount(): Int
-
-    @Query("SELECT COUNT(*) FROM execution_logs WHERE status = 'FAILED'")
-    suspend fun getFailCount(): Int
 }
 
 @Entity(tableName = "pin_config")
