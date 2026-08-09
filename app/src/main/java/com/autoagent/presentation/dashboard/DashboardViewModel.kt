@@ -185,45 +185,13 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val entity = withContext(Dispatchers.IO) { repository.getTask(taskId) }
-                    ?: run {
-                        _uiState.update { it.copy(error = "Task nahi mila") }
-                        return@launch
-                    }
+                    ?: return@launch
                 val task = gsonHelper.entityToTask(entity)
                 L.d("DashVM", "Running task: ${task.name}")
-
-                // Try direct execution via live service first
-                val svc = AutoAgentAccessibilityService.getInstance()
-                if (svc != null && AutoAgentAccessibilityService.isAvailable()) {
-                    _uiState.update { it.copy(lastRunResult = "▶️ ${task.name} chal raha hai...") }
-                    val logs = mutableListOf<com.autoagent.domain.model.StepLog>()
-                    val status = withContext(Dispatchers.IO) {
-                        svc.executeSteps(task.steps) { log -> logs.add(log) }
-                    }
-                    withContext(Dispatchers.IO) {
-                        repository.updateTaskLastRun(taskId, System.currentTimeMillis(), status)
-                    }
-                    val failed = logs.firstOrNull { !it.success }
-                    _uiState.update {
-                        it.copy(lastRunResult = when (status) {
-                            com.autoagent.domain.model.RunStatus.SUCCESS ->
-                                "✅ ${task.name} complete hua (${logs.size} steps)"
-                            com.autoagent.domain.model.RunStatus.CANCELLED -> "🛑 Rok diya gaya"
-                            else -> "❌ Failed: ${failed?.description ?: "unknown"}"
-                        })
-                    }
-                } else {
-                    // Service not live — show clear error, do NOT silently schedule WorkManager
-                    _uiState.update {
-                        it.copy(error = "Accessibility Service connected nahi hai.\n\n" +
-                            "Fix:\n" +
-                            "1. Settings → Accessibility → AutoAgent → OFF karo\n" +
-                            "2. Phir ON karo\n" +
-                            "3. App dobara kholo\n" +
-                            "4. Dobara Run karo")
-                    }
-                    return@launch
-                }
+                TaskExecutorWorker.scheduleTask(context, task.copy(
+                    triggerType = com.autoagent.domain.model.TriggerType.MANUAL
+                ))
+                _uiState.update { it.copy(lastRunResult = "▶️ ${task.name} start hua") }
                 memoryEngine.saveLastCommand("Run: ${task.name}")
             } catch (e: Exception) {
                 L.e("DashVM", "runTaskNow error", e)
