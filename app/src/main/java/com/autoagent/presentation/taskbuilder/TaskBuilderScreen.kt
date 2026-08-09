@@ -303,6 +303,7 @@ fun AppCacheEntity.toInfo() = InstalledAppInfo(
 @Composable
 fun TaskBuilderScreen(
     editTaskId: Long? = null,
+    prefillFromAi: com.autoagent.personal.ai.NaturalLanguageTaskParser.ParsedTask? = null,
     onBack: () -> Unit,
     onSaved: () -> Unit,
     viewModel: TaskBuilderViewModel = hiltViewModel()
@@ -328,6 +329,23 @@ fun TaskBuilderScreen(
             trigger = viewModel.pendingTrigger
             time = viewModel.pendingTime
         }
+
+    // AI se aaya task prefill karo
+    LaunchedEffect(prefillFromAi) {
+        prefillFromAi?.let { ai ->
+            if (name.isBlank()) name = ai.taskName
+            ai.targetApp?.let { pkg ->
+                viewModel.state.value.appList.firstOrNull { it.packageName == pkg }
+                    ?.let { viewModel.selectApp(it) }
+            }
+            if (inputText.isBlank()) inputText = ai.message ?: ""
+            if (url.isBlank()) url = ai.url ?: ""
+            ai.scheduledHour?.let { h ->
+                if (h >= 0) time = "%02d:%02d".format(h, ai.scheduledMinute ?: 0)
+            }
+            if (trigger == "MANUAL" && ai.scheduledHour != null) trigger = "ONE_TIME"
+        }
+    }
     }
 
     // PIN Dialog
@@ -343,7 +361,7 @@ fun TaskBuilderScreen(
                     OutlinedTextField(
                         value = pin,
                         onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) pin = it },
-                        label = { Text("10-Digit PIN") },
+                        label = { Text("6-Digit PIN") },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                         modifier = Modifier.fillMaxWidth(), singleLine = true,

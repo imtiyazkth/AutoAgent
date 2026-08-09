@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.autoagent.personal.ai.NaturalLanguageTaskParser
 import com.autoagent.personal.presentation.ai.AiTaskScreen
 import com.autoagent.personal.presentation.dashboard.DashboardScreen
 import com.autoagent.personal.presentation.dashboard.DashboardViewModel
@@ -21,7 +22,6 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -40,16 +40,17 @@ fun AppNavigation() {
     val dashVM: DashboardViewModel = hiltViewModel()
     val uiState by dashVM.uiState.collectAsState()
 
-    var screen by remember { mutableStateOf("permission_center") }
+    var screen by remember { mutableStateOf("dashboard") }
     var editTaskId by remember { mutableStateOf<Long?>(null) }
+    // AI se aaya parsed task store karo
+    var aiParsedTask by remember {
+        mutableStateOf<NaturalLanguageTaskParser.ParsedTask?>(null)
+    }
 
     LaunchedEffect(uiState.navigateTo) {
         val target = uiState.navigateTo ?: return@LaunchedEffect
         when {
-            target == "add_task" -> {
-                editTaskId = null
-                screen = "add_task"
-            }
+            target == "add_task" -> { editTaskId = null; screen = "add_task" }
             target.startsWith("edit_task_") -> {
                 editTaskId = target.removePrefix("edit_task_").toLongOrNull()
                 screen = "add_task"
@@ -73,13 +74,25 @@ fun AppNavigation() {
         )
         "add_task" -> TaskBuilderScreen(
             editTaskId = editTaskId,
-            onBack = { editTaskId = null; screen = "dashboard" },
-            onSaved = { editTaskId = null; screen = "dashboard" }
+            prefillFromAi = aiParsedTask,
+            onBack = {
+                editTaskId = null
+                aiParsedTask = null
+                screen = "dashboard"
+            },
+            onSaved = {
+                editTaskId = null
+                aiParsedTask = null
+                screen = "dashboard"
+            }
         )
         "diagnostics" -> DiagnosticsScreen(onBack = { screen = "dashboard" })
         "ai_task" -> AiTaskScreen(
             onBack = { screen = "dashboard" },
-            onTaskParsed = { screen = "add_task" }
+            onTaskParsed = { parsed ->
+                aiParsedTask = parsed   // parsed task save karo
+                screen = "add_task"     // TaskBuilder mein jao
+            }
         )
         "accessibility_setup" -> AccessibilitySetupScreen(
             onDone = { screen = "dashboard" },
