@@ -170,7 +170,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun requestRun(taskId: Long) {
-        _uiState.update { it.copy(showPinVerify = true, pendingTaskId = taskId, pinError = null) }
+        runTaskNow(taskId)
     }
 
     fun requestToggle(taskId: Long) {

@@ -172,7 +172,7 @@ class NaturalLanguageTaskParser @Inject constructor() {
         if (targetPkg != null) {
             steps.add(TaskStep(
                 id = stepId++, type = ActionType.LAUNCH_APP,
-                targetApp = targetPkg, delayMs = 2000L, retryCount = 3,
+                targetApp = targetPkg, delayMs = 2500L, retryCount = 3,
                 description = "$targetAppName kholo"
             ))
         }
@@ -185,7 +185,41 @@ class NaturalLanguageTaskParser @Inject constructor() {
             ))
         }
 
-        if (searchQuery != null) {
+        val isMessaging = targetPkg != null && (
+            targetPkg.contains("whatsapp") || targetPkg.contains("telegram") ||
+            targetPkg.contains("messenger") || targetPkg.contains("signal") ||
+            targetPkg.contains("discord") || targetPkg.contains("slack")
+        )
+
+        if (recipient != null && isMessaging) {
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.WAIT_FOR_TEXT,
+                waitForText = "Search", delayMs = 1500L, retryCount = 3,
+                description = "Search button ka wait karo"
+            ))
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.TAP_BUTTON,
+                buttonText = "Search", delayMs = 800L, retryCount = 3,
+                description = "Search tap karo"
+            ))
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.ENTER_TEXT,
+                inputText = recipient, delayMs = 1000L,
+                description = "$recipient ka naam type karo"
+            ))
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.WAIT_FOR_TEXT,
+                waitForText = recipient, delayMs = 1500L, retryCount = 3,
+                description = "$recipient contact mein aane ka wait"
+            ))
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.TAP_BY_LABEL,
+                buttonText = recipient, delayMs = 1000L, retryCount = 3,
+                description = "$recipient pe tap karo"
+            ))
+        }
+
+        if (searchQuery != null && !isMessaging) {
             steps.add(TaskStep(
                 id = stepId++, type = ActionType.ENTER_TEXT,
                 inputText = searchQuery, delayMs = 1000L,
@@ -198,27 +232,37 @@ class NaturalLanguageTaskParser @Inject constructor() {
             ))
         }
 
-        if (message != null && searchQuery == null) {
+        if (message != null) {
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.WAIT_FOR_TEXT,
+                waitForText = "Type a message", delayMs = 1000L,
+                description = "Message box ready hone ka wait"
+            ))
+            steps.add(TaskStep(
+                id = stepId++, type = ActionType.TAP_BUTTON,
+                buttonText = "Type a message", delayMs = 500L,
+                description = "Message box tap karo"
+            ))
             steps.add(TaskStep(
                 id = stepId++, type = ActionType.ENTER_TEXT,
                 inputText = message, delayMs = 1000L,
-                description = "Message type karo"
+                description = "Message type karo: $message"
             ))
-            val isMessaging = targetPkg != null && (
-                targetPkg.contains("whatsapp") || targetPkg.contains("telegram") ||
-                targetPkg.contains("messenger") || targetPkg.contains("signal") ||
-                targetPkg.contains("discord") || targetPkg.contains("slack")
-            )
             if (isMessaging) {
                 steps.add(TaskStep(
                     id = stepId++, type = ActionType.TAP_BUTTON,
-                    buttonText = "Send", delayMs = 500L, retryCount = 3,
+                    buttonText = "Send", delayMs = 800L, retryCount = 3,
                     description = "Send dabao"
                 ))
             }
         }
 
         if (steps.isEmpty()) {
+            steps.add(TaskStep(
+                id = 1, type = ActionType.CONFIRM_ACTION,
+                delayMs = 500L, description = "Manual action"
+            ))
+        }
             steps.add(TaskStep(
                 id = 1, type = ActionType.CONFIRM_ACTION,
                 delayMs = 500L, description = "Manual action"
