@@ -1,10 +1,10 @@
-package com.autoagent.di
+package com.autoagent.personal.di
 
 import android.content.Context
 import androidx.room.Room
-import com.autoagent.data.db.*
-import com.autoagent.data.db.AutoAgentDatabase.Companion.MIGRATION_1_2
-import com.autoagent.data.db.AutoAgentDatabase.Companion.MIGRATION_2_3
+import com.autoagent.personal.data.db.*
+import com.autoagent.personal.data.db.AutoAgentDatabase.Companion.MIGRATION_1_2
+import com.autoagent.personal.data.db.AutoAgentDatabase.Companion.MIGRATION_2_3
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

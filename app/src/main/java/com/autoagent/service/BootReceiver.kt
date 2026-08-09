@@ -1,4 +1,4 @@
-package com.autoagent.service
+package com.autoagent.personal.service
 
 import android.content.BroadcastReceiver
 import android.content.Context

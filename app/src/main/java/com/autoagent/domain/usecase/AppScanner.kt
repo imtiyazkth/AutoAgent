@@ -1,11 +1,11 @@
-package com.autoagent.domain.usecase
+package com.autoagent.personal.domain.usecase
 
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import com.autoagent.domain.model.InstalledAppInfo
+import com.autoagent.personal.domain.model.InstalledAppInfo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton

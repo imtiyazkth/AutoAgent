@@ -1,4 +1,4 @@
-package com.autoagent.presentation.ai
+package com.autoagent.personal.presentation.ai
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.autoagent.ai.NaturalLanguageTaskParser
-import com.autoagent.memory.MemoryEngine
+import com.autoagent.personal.ai.NaturalLanguageTaskParser
+import com.autoagent.personal.memory.MemoryEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

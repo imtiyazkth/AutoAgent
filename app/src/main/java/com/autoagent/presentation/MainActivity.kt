@@ -1,4 +1,4 @@
-package com.autoagent.presentation
+package com.autoagent.personal.presentation
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -10,13 +10,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.autoagent.presentation.ai.AiTaskScreen
-import com.autoagent.presentation.dashboard.DashboardScreen
-import com.autoagent.presentation.dashboard.DashboardViewModel
-import com.autoagent.presentation.diagnostics.DiagnosticsScreen
-import com.autoagent.presentation.permissions.PermissionCenterScreen
-import com.autoagent.presentation.setup.AccessibilitySetupScreen
-import com.autoagent.presentation.taskbuilder.TaskBuilderScreen
+import com.autoagent.personal.presentation.ai.AiTaskScreen
+import com.autoagent.personal.presentation.dashboard.DashboardScreen
+import com.autoagent.personal.presentation.dashboard.DashboardViewModel
+import com.autoagent.personal.presentation.diagnostics.DiagnosticsScreen
+import com.autoagent.personal.presentation.permissions.PermissionCenterScreen
+import com.autoagent.personal.presentation.setup.AccessibilitySetupScreen
+import com.autoagent.personal.presentation.taskbuilder.TaskBuilderScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

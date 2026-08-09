@@ -1,4 +1,4 @@
-package com.autoagent.presentation.permissions
+package com.autoagent.personal.presentation.permissions
 
 import android.Manifest
 import android.app.AppOpsManager
@@ -27,7 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.autoagent.util.isAccessibilityEnabled
+import com.autoagent.personal.util.isAccessibilityEnabled
 
 enum class PermStatus { GRANTED, PENDING, BLOCKED }
 enum class PermRisk { LOW, MEDIUM, HIGH }

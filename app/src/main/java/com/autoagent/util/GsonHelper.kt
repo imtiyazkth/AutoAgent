@@ -1,7 +1,7 @@
-package com.autoagent.util
+package com.autoagent.personal.util
 
-import com.autoagent.data.db.TaskEntity
-import com.autoagent.domain.model.*
+import com.autoagent.personal.data.db.TaskEntity
+import com.autoagent.personal.domain.model.*
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import javax.inject.Inject

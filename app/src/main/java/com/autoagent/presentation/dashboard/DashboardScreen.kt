@@ -1,4 +1,4 @@
-package com.autoagent.presentation.dashboard
+package com.autoagent.personal.presentation.dashboard
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -20,10 +20,10 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.autoagent.data.db.ExecutionLogEntity
-import com.autoagent.data.db.TaskEntity
-import com.autoagent.util.L
-import com.autoagent.util.PinManager
+import com.autoagent.personal.data.db.ExecutionLogEntity
+import com.autoagent.personal.data.db.TaskEntity
+import com.autoagent.personal.util.L
+import com.autoagent.personal.util.PinManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

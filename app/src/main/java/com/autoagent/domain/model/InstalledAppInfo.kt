@@ -1,4 +1,4 @@
-package com.autoagent.domain.model
+package com.autoagent.personal.domain.model
 
 data class InstalledAppInfo(
     val packageName: String,

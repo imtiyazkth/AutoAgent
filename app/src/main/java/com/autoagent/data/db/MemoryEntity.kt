@@ -1,4 +1,4 @@
-package com.autoagent.data.db
+package com.autoagent.personal.data.db
 
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow

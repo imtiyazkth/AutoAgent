@@ -1,11 +1,11 @@
-package com.autoagent.util
+package com.autoagent.personal.util
 
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
-import com.autoagent.data.db.PinDao
-import com.autoagent.data.db.PinEntity
+import com.autoagent.personal.data.db.PinDao
+import com.autoagent.personal.data.db.PinEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.security.MessageDigest
 import java.security.SecureRandom

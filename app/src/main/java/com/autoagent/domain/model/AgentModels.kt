@@ -1,4 +1,4 @@
-package com.autoagent.domain.model
+package com.autoagent.personal.domain.model
 
 data class AgentTask(
     val id: Long = 0,

@@ -1,4 +1,4 @@
-package com.autoagent.service.accessibility
+package com.autoagent.personal.service.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
@@ -9,10 +9,10 @@ import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
-import com.autoagent.domain.model.ActionType
-import com.autoagent.domain.model.RunStatus
-import com.autoagent.domain.model.StepLog
-import com.autoagent.domain.model.TaskStep
+import com.autoagent.personal.domain.model.ActionType
+import com.autoagent.personal.domain.model.RunStatus
+import com.autoagent.personal.domain.model.StepLog
+import com.autoagent.personal.domain.model.TaskStep
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

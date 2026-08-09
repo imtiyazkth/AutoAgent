@@ -1,4 +1,4 @@
-package com.autoagent.presentation.taskbuilder
+package com.autoagent.personal.presentation.taskbuilder
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
@@ -26,16 +26,16 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.autoagent.data.db.AppCacheDao
-import com.autoagent.data.db.AppCacheEntity
-import com.autoagent.data.db.TaskEntity
-import com.autoagent.data.repository.AgentRepository
-import com.autoagent.domain.model.ActionType
-import com.autoagent.domain.model.InstalledAppInfo
-import com.autoagent.domain.model.TaskStep
-import com.autoagent.domain.usecase.AppScanner
-import com.autoagent.util.L
-import com.autoagent.util.PinManager
+import com.autoagent.personal.data.db.AppCacheDao
+import com.autoagent.personal.data.db.AppCacheEntity
+import com.autoagent.personal.data.db.TaskEntity
+import com.autoagent.personal.data.repository.AgentRepository
+import com.autoagent.personal.domain.model.ActionType
+import com.autoagent.personal.domain.model.InstalledAppInfo
+import com.autoagent.personal.domain.model.TaskStep
+import com.autoagent.personal.domain.usecase.AppScanner
+import com.autoagent.personal.util.L
+import com.autoagent.personal.util.PinManager
 import com.google.gson.Gson
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers

@@ -1,4 +1,4 @@
-package com.autoagent.presentation.setup
+package com.autoagent.personal.presentation.setup
 
 import android.content.Intent
 import android.provider.Settings
@@ -21,8 +21,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.autoagent.service.accessibility.AutoAgentAccessibilityService
-import com.autoagent.util.isAccessibilityEnabled
+import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
+import com.autoagent.personal.util.isAccessibilityEnabled
 import kotlinx.coroutines.delay
 
 // =============================================

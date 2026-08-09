@@ -1,9 +1,9 @@
-package com.autoagent.memory
+package com.autoagent.personal.memory
 
 import android.content.Context
 import android.util.Log
-import com.autoagent.data.db.MemoryDao
-import com.autoagent.data.db.MemoryEntity
+import com.autoagent.personal.data.db.MemoryDao
+import com.autoagent.personal.data.db.MemoryEntity
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject

@@ -1,4 +1,4 @@
-package com.autoagent.presentation.applist
+package com.autoagent.personal.presentation.applist
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,8 +17,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.autoagent.domain.model.InstalledAppInfo
-import com.autoagent.domain.usecase.AppScanner
+import com.autoagent.personal.domain.model.InstalledAppInfo
+import com.autoagent.personal.domain.usecase.AppScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow

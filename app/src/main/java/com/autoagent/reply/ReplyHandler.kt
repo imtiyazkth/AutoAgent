@@ -1,8 +1,8 @@
-package com.autoagent.reply
+package com.autoagent.personal.reply
 
 import android.util.Log
-import com.autoagent.memory.MemoryEngine
-import com.autoagent.service.accessibility.AutoAgentAccessibilityService
+import com.autoagent.personal.memory.MemoryEngine
+import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.delay

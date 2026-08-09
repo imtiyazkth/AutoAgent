@@ -1,4 +1,4 @@
-package com.autoagent.util
+package com.autoagent.personal.util
 
 import android.content.Context
 import android.os.Build

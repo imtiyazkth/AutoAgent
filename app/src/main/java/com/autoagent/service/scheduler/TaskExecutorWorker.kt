@@ -1,4 +1,4 @@
-package com.autoagent.service.scheduler
+package com.autoagent.personal.service.scheduler
 
 import android.content.Context
 import android.net.ConnectivityManager
@@ -6,11 +6,11 @@ import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.hilt.work.HiltWorker
 import androidx.work.*
-import com.autoagent.data.db.ExecutionLogEntity
-import com.autoagent.data.repository.AgentRepository
-import com.autoagent.domain.model.*
-import com.autoagent.service.accessibility.AutoAgentAccessibilityService
-import com.autoagent.util.GsonHelper
+import com.autoagent.personal.data.db.ExecutionLogEntity
+import com.autoagent.personal.data.repository.AgentRepository
+import com.autoagent.personal.domain.model.*
+import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
+import com.autoagent.personal.util.GsonHelper
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import java.util.Calendar

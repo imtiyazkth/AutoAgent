@@ -1,10 +1,10 @@
-package com.autoagent
+package com.autoagent.personal
 
 import android.app.Application
 import android.util.Log
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import com.autoagent.util.CrashLogger
+import com.autoagent.personal.util.CrashLogger
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 

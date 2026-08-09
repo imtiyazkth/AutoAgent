@@ -1,4 +1,4 @@
-package com.autoagent.presentation.diagnostics
+package com.autoagent.personal.presentation.diagnostics
 
 import android.content.Context
 import android.content.Intent
@@ -24,10 +24,10 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.autoagent.data.repository.AgentRepository
-import com.autoagent.service.accessibility.AutoAgentAccessibilityService
-import com.autoagent.util.PinManager
-import com.autoagent.util.isAccessibilityEnabled
+import com.autoagent.personal.data.repository.AgentRepository
+import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
+import com.autoagent.personal.util.PinManager
+import com.autoagent.personal.util.isAccessibilityEnabled
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers

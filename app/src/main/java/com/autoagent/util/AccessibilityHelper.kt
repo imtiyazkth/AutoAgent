@@ -1,14 +1,14 @@
-package com.autoagent.util
+package com.autoagent.personal.util
 
 import android.content.Context
 import android.provider.Settings
 import android.text.TextUtils
-import com.autoagent.service.accessibility.AutoAgentAccessibilityService
+import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
 
 fun isAccessibilityEnabled(context: Context): Boolean {
     return try {
         val component = "${context.packageName}/" +
-            "com.autoagent.service.accessibility.AutoAgentAccessibilityService"
+            "com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService"
         val services = Settings.Secure.getString(
             context.contentResolver,
             Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES

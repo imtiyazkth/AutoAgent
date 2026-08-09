@@ -1,7 +1,7 @@
-package com.autoagent.ai
+package com.autoagent.personal.ai
 
-import com.autoagent.domain.model.ActionType
-import com.autoagent.domain.model.TaskStep
+import com.autoagent.personal.domain.model.ActionType
+import com.autoagent.personal.domain.model.TaskStep
 import javax.inject.Inject
 import javax.inject.Singleton
 import java.util.Calendar

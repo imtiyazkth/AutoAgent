@@ -1,7 +1,7 @@
-package com.autoagent.data.repository
+package com.autoagent.personal.data.repository
 
-import com.autoagent.data.db.*
-import com.autoagent.domain.model.RunStatus
+import com.autoagent.personal.data.db.*
+import com.autoagent.personal.domain.model.RunStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
