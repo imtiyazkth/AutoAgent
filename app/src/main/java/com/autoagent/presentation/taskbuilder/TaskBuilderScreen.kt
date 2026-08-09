@@ -329,8 +329,8 @@ fun TaskBuilderScreen(
             trigger = viewModel.pendingTrigger
             time = viewModel.pendingTime
         }
+    }
 
-    // AI se aaya task prefill karo
     LaunchedEffect(prefillFromAi) {
         prefillFromAi?.let { ai ->
             if (name.isBlank()) name = ai.taskName
@@ -346,9 +346,6 @@ fun TaskBuilderScreen(
             if (trigger == "MANUAL" && ai.scheduledHour != null) trigger = "ONE_TIME"
         }
     }
-    }
-
-    // PIN Dialog
     if (state.showPinDialog) {
         var pin by remember { mutableStateOf("") }
         AlertDialog(
@@ -356,11 +353,11 @@ fun TaskBuilderScreen(
             title = { Text("PIN Enter Karo", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Task save karne ke liye 10-digit PIN.",
+                    Text("Task save karne ke liye 6-digit PIN.",
                         style = MaterialTheme.typography.bodySmall)
                     OutlinedTextField(
                         value = pin,
-                        onValueChange = { if (it.length <= 10 && it.all(Char::isDigit)) pin = it },
+                        onValueChange = { if (it.length <= 6 && it.all(Char::isDigit)) pin = it },
                         label = { Text("6-Digit PIN") },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
