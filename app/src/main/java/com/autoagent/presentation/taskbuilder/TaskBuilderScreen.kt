@@ -368,13 +368,13 @@ fun TaskBuilderScreen(
                         Text(it, color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall)
                     }
-                    Text("${pin.length}/10", style = MaterialTheme.typography.labelSmall)
+                    Text("${pin.length}/${PinManager.PIN_MAX}", style = MaterialTheme.typography.labelSmall)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         TextButton(onClick = { viewModel.dismissPin() }) { Text("Cancel") }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = { viewModel.verifyAndSave(pin) { onSaved() } },
-                            enabled = pin.length == 10 && !state.isSaving
+                            enabled = pin.length == PinManager.PIN_MAX && !state.isSaving
                         ) {
                             if (state.isSaving) CircularProgressIndicator(
                                 Modifier.size(16.dp), strokeWidth = 2.dp)
