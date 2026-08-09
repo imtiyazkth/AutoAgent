@@ -36,8 +36,12 @@ import com.autoagent.personal.domain.model.TaskStep
 import com.autoagent.personal.domain.usecase.AppScanner
 import com.autoagent.personal.util.L
 import com.autoagent.personal.util.PinManager
+import com.autoagent.personal.service.scheduler.TaskExecutorWorker
+import com.autoagent.personal.domain.model.*
 import com.google.gson.Gson
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +69,7 @@ data class TaskBuilderState(
 
 @HiltViewModel
 class TaskBuilderViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val repository: AgentRepository,
     private val pinManager: PinManager,
     private val appScanner: AppScanner,
@@ -213,7 +218,8 @@ class TaskBuilderViewModel @Inject constructor(
                 }
                 if (ok) {
                     _state.update { it.copy(showPinDialog = false, pinError = null, isSaving = true) }
-                    withContext(Dispatchers.IO) { saveTask() }
+                    val taskId = withContext(Dispatchers.IO) { saveTask() }
+                    withContext(Dispatchers.Main) { scheduleCurrentTask(taskId) }
                     _state.update { it.copy(isSaving = false, savedOk = true) }
                     onSuccess()
                 } else {
@@ -226,7 +232,7 @@ class TaskBuilderViewModel @Inject constructor(
         }
     }
 
-    private suspend fun saveTask() {
+    private suspend fun saveTask(): Long {
         val steps = mutableListOf<TaskStep>()
         var sid = 1
         pendingApp?.let {
@@ -251,7 +257,7 @@ class TaskBuilderViewModel @Inject constructor(
             else -> null
         }
 
-        repository.saveTask(TaskEntity(
+        return repository.saveTask(TaskEntity(
             name = pendingName.ifBlank { pendingApp?.appName ?: "Naya Task" },
             description = pendingDesc,
             triggerType = pendingTrigger.ifBlank { "MANUAL" },
@@ -266,6 +272,39 @@ class TaskBuilderViewModel @Inject constructor(
             totalRuns = 0, successRuns = 0
         ))
         L.d("TaskVM", "Task saved with ${steps.size} typed steps")
+    }
+
+    private fun scheduleCurrentTask(taskId: Long) {
+        try {
+            val triggerTime = when {
+                pendingTrigger == "ONE_TIME" && pendingDate.isNotBlank() ->
+                    "${pendingDate} ${pendingTime}".trim()
+                pendingTime.isNotBlank() -> pendingTime
+                else -> null
+            }
+            val task = com.autoagent.personal.domain.model.AgentTask(
+                id = taskId,
+                name = pendingName.ifBlank { pendingApp?.appName ?: "Naya Task" },
+                description = pendingDesc,
+                triggerType = try { com.autoagent.personal.domain.model.TriggerType.valueOf(pendingTrigger) } catch (e: Exception) { com.autoagent.personal.domain.model.TriggerType.MANUAL },
+                triggerTime = triggerTime,
+                triggerDays = emptyList(),
+                intervalMinutes = 0,
+                steps = emptyList(),
+                networkPolicy = com.autoagent.personal.domain.model.NetworkPolicy.WIFI_PREFERRED,
+                mobileDataAllowed = false,
+                isEnabled = true,
+                requiresConfirmation = false,
+                priority = 1,
+                createdAt = System.currentTimeMillis(),
+                lastRunAt = null, lastRunStatus = null,
+                totalRuns = 0, successRuns = 0
+            )
+            TaskExecutorWorker.scheduleTask(context, task)
+            L.d("TaskVM", "Task scheduled: ${task.name} trigger=${task.triggerType}")
+        } catch (e: Exception) {
+            L.e("TaskVM", "scheduleCurrentTask error", e)
+        }
     }
 
     fun dismissError() { _state.update { it.copy(saveError = null) } }
