@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AutoAgent</string>
+    <string name="accessibility_service_label">AutoAgent Automation</string>
+    <string name="accessibility_description">AutoAgent aapke phone mein scheduled automation tasks run karta hai. Ye service apps launch karne, text type karne, aur buttons tap karne mein madad karta hai. Emergency stop ke liye app mein STOP button press karo. Aap kabhi bhi is service ko band kar sakte hain.</string>
+    <string name="permission_center_title">Permission Center</string>
+    <string name="btn_grant">Grant Karo</string>
+    <string name="btn_fix_now">Fix Now</string>
+    <string name="btn_skip">Skip</string>
+</resources>
