@@ -40,7 +40,7 @@ fun AppNavigation() {
     val dashVM: DashboardViewModel = hiltViewModel()
     val uiState by dashVM.uiState.collectAsState()
 
-    var screen by remember { mutableStateOf("permission_center") }
+    var screen by remember { mutableStateOf("dashboard") }
     var editTaskId by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(uiState.navigateTo) {

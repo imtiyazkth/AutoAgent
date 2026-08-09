@@ -19,7 +19,7 @@ class PinManager @Inject constructor(
 ) {
     companion object {
         const val PIN_MIN = 4
-        const val PIN_MAX = 6
+        const val PIN_MAX = 10
         private const val PREFS_NAME = "autoagent_secure_prefs"
         private const val KEY_SALT = "pin_salt"
     }
@@ -50,7 +50,7 @@ class PinManager @Inject constructor(
 
     suspend fun setupPin(pin: String): Result<Unit> {
         if (pin.length !in PIN_MIN..PIN_MAX)
-            return Result.failure(Exception("PIN $PIN_MIN se $PIN_MAX digits ka hona chahiye"))
+            return Result.failure(Exception("PIN 4 se 10 digits ka hona chahiye"))
         if (!pin.all { it.isDigit() })
             return Result.failure(Exception("PIN sirf numbers hone chahiye"))
         val hash = hashPin(pin)
