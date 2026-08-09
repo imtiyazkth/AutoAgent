@@ -189,7 +189,7 @@ class DashboardViewModel @Inject constructor(
                 val task = gsonHelper.entityToTask(entity)
                 L.d("DashVM", "Running task: ${task.name}")
                 TaskExecutorWorker.scheduleTask(context, task.copy(
-                    triggerType = com.autoagent.domain.model.TriggerType.MANUAL
+                    triggerType = com.autoagent.personal.domain.model.TriggerType.MANUAL
                 ))
                 _uiState.update { it.copy(lastRunResult = "▶️ ${task.name} start hua") }
                 memoryEngine.saveLastCommand("Run: ${task.name}")

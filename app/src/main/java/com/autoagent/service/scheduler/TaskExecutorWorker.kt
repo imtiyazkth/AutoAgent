@@ -166,7 +166,7 @@ class TaskExecutorWorker @AssistedInject constructor(
             return if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
 
-        val stepLogs = mutableListOf<com.autoagent.domain.model.StepLog>()
+        val stepLogs = mutableListOf<com.autoagent.personal.domain.model.StepLog>()
         val status = service.executeSteps(task.steps) { stepLog -> stepLogs.add(stepLog) }
 
         repository.updateLog(
