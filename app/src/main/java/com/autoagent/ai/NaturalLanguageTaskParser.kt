@@ -222,7 +222,7 @@ class NaturalLanguageTaskParser @Inject constructor() {
         }
 
         if (isReply && isMessaging) {
-            val wMs = if (delayMinutes!=null) delayMinutes*60_000L else 30_000L
+            val dm = delayMinutes; val wMs = if (dm!=null) dm*60_000L else 30_000L
             steps.add(TaskStep(id=sid++,type=ActionType.WAIT_SECONDS,delayMs=wMs,description="Reply ka wait (${wMs/1000}s)"))
             steps.add(TaskStep(id=sid++,type=ActionType.READ_TEXT,delayMs=500L,description="Reply check karo"))
         }
