@@ -85,6 +85,7 @@ class TaskBuilderViewModel @Inject constructor(
     var pendingTime = ""
     var pendingDate = ""
     var pendingApp: InstalledAppInfo? = null
+    var aiSteps: List<com.autoagent.personal.domain.model.TaskStep> = emptyList()
     var pendingUrl = ""
     var pendingText = ""
     var pendingButton = ""
@@ -233,6 +234,21 @@ class TaskBuilderViewModel @Inject constructor(
     }
 
     private suspend fun saveTask(): Long {
+        // AI steps ko priority do — agar AI ne steps diye hain to wahi use karo
+        if (aiSteps.isNotEmpty()) {
+            return repository.saveTask(TaskEntity(
+                id = 0, name = pendingName.ifBlank { "AI Task" },
+                description = pendingDesc,
+                triggerType = pendingTrigger,
+                triggerTime = pendingTime.ifBlank { null },
+                triggerDays = "[]", intervalMinutes = 0,
+                stepsJson = com.google.gson.Gson().toJson(aiSteps),
+                networkPolicy = "WIFI_PREFERRED", mobileDataAllowed = false,
+                isEnabled = true, requiresConfirmation = false, priority = 1,
+                createdAt = System.currentTimeMillis(), lastRunAt = null,
+                lastRunStatus = null, totalRuns = 0, successRuns = 0
+            ))
+        }
         val steps = mutableListOf<TaskStep>()
         var sid = 1
         pendingApp?.let {
@@ -383,6 +399,7 @@ fun TaskBuilderScreen(
                 if (h >= 0) time = "%02d:%02d".format(h, ai.scheduledMinute ?: 0)
             }
             if (trigger == "MANUAL" && ai.scheduledHour != null) trigger = "ONE_TIME"
+            viewModel.aiSteps = ai.steps
         }
     }
     if (state.showPinDialog) {
