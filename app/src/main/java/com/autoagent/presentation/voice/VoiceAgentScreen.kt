@@ -337,6 +337,7 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
     val pulse by inf.animateFloat(1f, 1.3f,
         infiniteRepeatable(tween(600, easing = EaseInOut), RepeatMode.Reverse), label = "p")
 
+    LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
