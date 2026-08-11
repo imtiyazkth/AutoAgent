@@ -157,7 +157,7 @@ object GoalPlanner {
             .find(this)?.groupValues?.getOrNull(1)?.trim()
 
     private fun String.extractMessage(): String? {
-        Regex("""['""](.*?)['"""]""").find(this)?.let { return it.groupValues[1] }
+        Regex("""['\"](.*?)['\"]""").find(this)?.let { return it.groupValues[1] }
         return Regex("""(?:text|message|bolo|likho|kaho|bol)[:\s]+(.+?)(?:\s+(?:aur|and|send)|$)""")
             .find(this)?.groupValues?.getOrNull(1)?.trim()
     }
