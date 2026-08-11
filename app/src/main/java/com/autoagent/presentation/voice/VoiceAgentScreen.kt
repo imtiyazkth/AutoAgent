@@ -366,7 +366,8 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         })
         onDispose { recognizer.destroy() }
     }
-fun listen() {
+
+    fun listen() {
         if (isListening) { recognizer.stopListening(); isListening = false; return }
         isListening = true
         showKeyboard = false
@@ -379,7 +380,6 @@ fun listen() {
         }
         recognizer.startListening(i)
     }
-
     Scaffold(
         topBar = {
             TopAppBar(
