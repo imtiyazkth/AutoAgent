@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.autoagent.personal.ai.NaturalLanguageTaskParser
 import com.autoagent.personal.presentation.ai.AiTaskScreen
+import com.autoagent.personal.presentation.voice.VoiceAgentScreen
 import com.autoagent.personal.presentation.dashboard.DashboardScreen
 import com.autoagent.personal.presentation.dashboard.DashboardViewModel
 import com.autoagent.personal.presentation.diagnostics.DiagnosticsScreen
@@ -70,7 +71,8 @@ fun AppNavigation() {
             onDiagnostics = { screen = "diagnostics" },
             onSetupAccessibility = { screen = "accessibility_setup" },
             onPermissions = { screen = "permission_center" },
-            onAiTask = { screen = "ai_task" }
+            onAiTask = { screen = "ai_task" },
+            onVoiceAgent = { screen = "voice_agent" }
         )
         "add_task" -> TaskBuilderScreen(
             editTaskId = editTaskId,
@@ -87,6 +89,7 @@ fun AppNavigation() {
             }
         )
         "diagnostics" -> DiagnosticsScreen(onBack = { screen = "dashboard" })
+        "voice_agent" -> VoiceAgentScreen(onBack = { screen = "dashboard" })
         "ai_task" -> AiTaskScreen(
             onBack = { screen = "dashboard" },
             onTaskParsed = { parsed ->

@@ -33,7 +33,8 @@ fun DashboardScreen(
     onDiagnostics: () -> Unit = {},
     onSetupAccessibility: () -> Unit = {},
     onPermissions: () -> Unit = {},
-    onAiTask: () -> Unit = {}
+    onAiTask: () -> Unit = {},
+    onVoiceAgent: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val tasks by viewModel.tasks.collectAsState()
@@ -233,6 +234,25 @@ fun DashboardScreen(
                     StatBox("Active", "${tasks.count { it.isEnabled }}", Color(0xFF4CAF50))
                     StatBox("Runs", "${recentLogs.size}", Color(0xFF2196F3))
                     StatBox("OK", "$sr%", if (sr >= 80) Color(0xFF4CAF50) else Color(0xFFFF9800))
+                }
+            }
+
+            // Voice Agent Card
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4CAF50).copy(0.15f)),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.clickable { onVoiceAgent() }
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.RecordVoiceOver, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Voice Agent 🎙", fontWeight = FontWeight.Bold)
+                            Text("Bolke koi bhi kaam karwao — AI khud karta hai", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.Filled.ChevronRight, null)
+                    }
                 }
             }
 
