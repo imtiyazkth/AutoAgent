@@ -75,6 +75,8 @@ class VoiceAgentViewModel @Inject constructor(
     val partialText: StateFlow<String> = _partialText
 
     private var pendingParsed: NaturalLanguageTaskParser.ParsedTask? = null
+    private var lastActiveApp: String? = null
+    private var lastActiveAppName: String? = null
     private var pendingTime: String? = null
     private var context2: String? = null
     private var tts: TextToSpeech? = null
@@ -84,6 +86,7 @@ class VoiceAgentViewModel @Inject constructor(
         viewModelScope.launch {
             delay(600)
             agentSpeak("Ji haan! Main AutoAgent hoon. Batayein, kya karna hai?")
+            _agentState.value = AgentState.WAITING_FOLLOWUP
         }
     }
 
@@ -141,6 +144,14 @@ fun agentSpeak(text: String) {
             pendingParsed = parsed
 
             if (parsed.targetApp == null && parsed.url == null) {
+                // Last active app ka context use karo
+                val ctxApp = lastActiveApp
+                val ctxName = lastActiveAppName
+                if (ctxApp != null) {
+                    agentSpeak("$ctxName mein ${parsed.message ?: parsed.steps.firstOrNull()?.description ?: "kaam"} — abhi karun?")
+                    pendingParsed = parsed.copy(targetApp = ctxApp, targetAppName = ctxName)
+                    return@launch
+                }
                 agentSpeak("Samajh nahi aaya. Kaunsi app mein kya karna hai, batayein?")
                 pendingParsed = null; return@launch
             }
@@ -325,6 +336,20 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         infiniteRepeatable(tween(600, easing = EaseInOut), RepeatMode.Reverse), label = "p")
 
     LaunchedEffect(messages.size) {
+
+    // Auto-listen: jab agent WAITING_FOLLOWUP ho to mic automatically on ho
+    LaunchedEffect(agentState) {
+        if (agentState == AgentState.WAITING_FOLLOWUP && !isListening) {
+            delay(800) // Agent ke bolne ke baad thoda ruko
+            listen()
+        }
+    }
+
+    // App khulte hi auto-listen shuru karo
+    LaunchedEffect(Unit) {
+        delay(2000) // Greeting ke baad
+        listen()
+    }
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 

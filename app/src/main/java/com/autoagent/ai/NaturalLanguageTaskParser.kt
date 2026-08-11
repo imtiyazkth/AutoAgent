@@ -58,6 +58,16 @@ class NaturalLanguageTaskParser @Inject constructor() {
         "signal" to Pair("org.thoughtcrime.securesms","Signal"),
         "slack" to Pair("com.Slack","Slack"),
         "discord" to Pair("com.discord","Discord"),
+        // Hindi keywords
+        "यूट्यूब" to Pair("com.google.android.youtube","YouTube"),
+        "यूट्यूब खोलो" to Pair("com.google.android.youtube","YouTube"),
+        "व्हाट्सएप" to Pair("com.whatsapp","WhatsApp"),
+        "इंस्टाग्राम" to Pair("com.instagram.android","Instagram"),
+        "फेसबुक" to Pair("com.facebook.katana","Facebook"),
+        "टेलीग्राम" to Pair("org.telegram.messenger","Telegram"),
+        "क्रोम" to Pair("com.android.chrome","Chrome"),
+        "कैमरा" to Pair("com.android.camera2","Camera"),
+        "सेटिंग" to Pair("com.android.settings","Settings"),
         "phone" to Pair("com.android.dialer","Phone"),
         "contacts" to Pair("com.android.contacts","Contacts"),
         "settings" to Pair("com.android.settings","Settings"),
@@ -166,8 +176,8 @@ class NaturalLanguageTaskParser @Inject constructor() {
 
         val isAlarm = text.contains("alarm") || text.contains("wake") || text.contains("jagao") || text.contains("uthao")
         val isAlarmSet = isAlarm && scheduledHour != null
-        val isPlay = text.contains("play") || text.contains("chalao") || text.contains("bajao") || text.contains("suno")
-        val isStop = text.contains("stop") || text.contains("band karo") || text.contains("rok") || text.contains("close")
+        val isPlay = text.contains("play") || text.contains("chalao") || text.contains("bajao") || text.contains("suno") || text.contains("चलाओ") || text.contains("बजाओ") || text.contains("सुनो")
+        val isStop = text.contains("stop") || text.contains("band karo") || text.contains("rok") || text.contains("close") || text.contains("बंद") || text.contains("रोको")
         val isNext = text.contains(" next") || text.contains("agla") || text.contains("next dabao")
         val isReply = text.contains("reply") || text.contains("jawab") || text.contains("wait for reply")
 
