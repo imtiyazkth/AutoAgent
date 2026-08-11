@@ -174,7 +174,7 @@ class NaturalLanguageTaskParser @Inject constructor() {
         val artistR = Regex("""(.+?)\s+(?:ka gana|ka song|ki song|songs?|music|gane)""", RegexOption.IGNORE_CASE)
         val searchQuery = srchR.find(input)?.groupValues?.getOrNull(1)?.trim()
             ?: playR.find(input)?.groupValues?.getOrNull(1)?.trim()
-            ?: if (isPlay) artistR.find(input)?.groupValues?.getOrNull(1)?.trim() else null
+            ?: artistR.find(input)?.groupValues?.getOrNull(1)?.trim()
 
         val duration = detectDurationMs(text)
 
