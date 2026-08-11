@@ -294,6 +294,80 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         }
     }
 
+
+    fun getScreenState(): com.autoagent.personal.agent.ScreenState {
+        val root = rootInActiveWindow
+        val pkg  = root?.packageName?.toString() ?: ""
+        val texts = mutableListOf<String>()
+        val clickable = mutableListOf<String>()
+        var hasInput = false
+        var scrollable = false
+        if (root != null) collectNodes(root, texts, clickable, { hasInput = true }, { scrollable = true }, 0)
+        return com.autoagent.personal.agent.ScreenState(pkg, texts, clickable, hasInput, scrollable)
+    }
+
+    private fun collectNodes(node: AccessibilityNodeInfo, texts: MutableList<String>,
+        clickable: MutableList<String>, onInput: () -> Unit, onScroll: () -> Unit, depth: Int) {
+        if (depth > MAX_TREE_DEPTH) return
+        val t = node.text?.toString() ?: node.contentDescription?.toString()
+        if (!t.isNullOrBlank()) { texts.add(t); if (node.isClickable) clickable.add(t) }
+        if (node.isEditable) onInput()
+        if (node.isScrollable) onScroll()
+        for (i in 0 until node.childCount) collectNodes(node.getChild(i) ?: continue, texts, clickable, onInput, onScroll, depth + 1)
+    }
+
+    fun tapText(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        var nodes = root.findAccessibilityNodeInfosByText(text)
+        if (nodes.isNullOrEmpty()) {
+            val list = mutableListOf<AccessibilityNodeInfo>()
+            walkTree(root, 0) { n ->
+                val t = n.text?.toString() ?: n.contentDescription?.toString() ?: ""
+                if (t.contains(text, ignoreCase = true)) list.add(n)
+            }
+            nodes = list
+        }
+        return try {
+            val node = nodes.firstOrNull { it.isClickable } ?: nodes.firstOrNull() ?: return false
+            performClickOn(node)
+        } finally { nodes.forEach { try { it.recycle() } catch (_: Exception) {} } }
+    }
+
+    fun typeText(text: String): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val edit = findEditableNode(root) ?: return false
+        edit.performAction(AccessibilityNodeInfo.ACTION_CLICK)
+        val args = Bundle().apply {
+            putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
+        }
+        return edit.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+    }
+
+    fun pressSearchKey(): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val edit = findEditableNode(root) ?: return false
+        val args = Bundle().apply {
+            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
+                AccessibilityNodeInfo.MOVEMENT_GRANULARITY_LINE)
+        }
+        return edit.performAction(AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY, args)
+    }
+
+    fun scrollDown(): Boolean {
+        val dm = resources.displayMetrics
+        val w = dm.widthPixels.toFloat(); val h = dm.heightPixels.toFloat()
+        val path = android.graphics.Path().apply { moveTo(w/2, h*0.72f); lineTo(w/2, h*0.28f) }
+        val gesture = android.accessibilityservice.GestureDescription.Builder()
+            .addStroke(android.accessibilityservice.GestureDescription.StrokeDescription(path, 0, 350)).build()
+        return dispatchGesture(gesture, null, null)
+    }
+
+    private fun walkTree(node: AccessibilityNodeInfo, depth: Int, v: (AccessibilityNodeInfo) -> Unit) {
+        if (depth > MAX_TREE_DEPTH) return
+        v(node)
+        for (i in 0 until node.childCount) walkTree(node.getChild(i) ?: return, depth+1, v)
+    }
+
     fun triggerEmergencyStop() {
         emergencyStop.value = true
         isRunning.value = false

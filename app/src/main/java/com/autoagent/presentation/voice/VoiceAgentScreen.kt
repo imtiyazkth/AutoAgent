@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.autoagent.personal.agent.ReactAgent
 import com.autoagent.personal.ai.NaturalLanguageTaskParser
 import com.autoagent.personal.data.db.TaskEntity
 import com.autoagent.personal.data.repository.AgentRepository
@@ -119,64 +120,47 @@ class VoiceAgentViewModel @Inject constructor(
         handle(text)
     }
 
+    private var reactAgent: ReactAgent? = null
+
     private fun handle(input: String) {
         viewModelScope.launch {
-            _agentState.value = AgentState.THINKING
             val lower = input.lowercase().trim()
 
-            // Emergency stop
-            if (lower.contains("stop") || lower.contains("band karo") || lower.contains("ruk")) {
+            if (lower.contains("stop") || lower.contains("band karo") || lower.contains("ruk") || lower.contains("rok")) {
                 AutoAgentAccessibilityService.getInstance()?.triggerEmergencyStop()
+                reactAgent?.stop(); reactAgent = null
                 agentSpeak("Theek hai, ruk gaya!")
-                pendingParsed = null; pendingTime = null; context2 = null
                 return@launch
             }
 
-            // Followup: time answer
-            if (pendingParsed != null && context2 == "time") {
-                handleTimeReply(input); return@launch
+            if (AutoAgentAccessibilityService.getInstance() == null) {
+                agentSpeak("Pehle Accessibility Service ON karo Settings mein!")
+                return@launch
             }
 
-            // Followup: confirm
-            if (pendingParsed != null && context2 == "confirm") {
-                handleConfirm(input); return@launch
+            _agentState.value = AgentState.THINKING
+            agentSpeak("Theek hai, shuru karta hoon!")
+
+            val agent = ReactAgent().also { reactAgent = it }
+
+            agent.onThought = { thought ->
+                viewModelScope.launch { addMsg("💭 $thought", true) }
             }
-
-            // Parse new command
-            val parsed = withContext(Dispatchers.Default) { parser.parse(input) }
-            pendingParsed = parsed
-
-            if (parsed.targetApp == null && parsed.url == null) {
-                // Last active app ka context use karo
-                val ctxApp = lastActiveApp
-                val ctxName = lastActiveAppName
-                if (ctxApp != null) {
-                    agentSpeak("$ctxName mein ${parsed.message ?: parsed.steps.firstOrNull()?.description ?: "kaam"} — abhi karun?")
-                    pendingParsed = parsed.copy(targetApp = ctxApp, targetAppName = ctxName)
-                    return@launch
+            agent.onAction = { action ->
+                viewModelScope.launch {
+                    _agentState.value = AgentState.EXECUTING
+                    addMsg("⚡ $action", true, isAction = true)
                 }
-                agentSpeak("Samajh nahi aaya. Kaunsi app mein kya karna hai, batayein?")
-                pendingParsed = null; return@launch
+            }
+            agent.onDone = { _, message ->
+                viewModelScope.launch {
+                    _agentState.value = AgentState.WAITING_FOLLOWUP
+                    agentSpeak(message)
+                    reactAgent = null
+                }
             }
 
-            if (parsed.scheduledHour != null && parsed.scheduledHour >= 0) {
-                val t = "%02d:%02d".format(parsed.scheduledHour, parsed.scheduledMinute ?: 0)
-                val d = if (parsed.scheduledDateOffset == 1) "kal" else "aaj"
-                pendingTime = t
-                context2 = "confirm"
-                val name = parsed.targetAppName ?: "App"
-                val recip = if (parsed.recipient != null) "${parsed.recipient} ko " else ""
-                val msg = if (parsed.message != null) "'${parsed.message?.take(25)}' " else ""
-                agentSpeak("$name mein ${recip}${msg}$d $t baje — schedule kar dun?")
-                _agentState.value = AgentState.WAITING_FOLLOWUP
-            } else {
-                val name = parsed.targetAppName ?: "App"
-                val recip = if (parsed.recipient != null) "${parsed.recipient} ko " else ""
-                val what = if (parsed.message != null) "'${parsed.message?.take(20)}'" else "kaam"
-                context2 = "time"
-                agentSpeak("$name mein $recip$what — kab karna hai? Abhi ya time batao?")
-                _agentState.value = AgentState.WAITING_FOLLOWUP
-            }
+            withContext(Dispatchers.Default) { agent.execute(input) }
         }
     }
 
