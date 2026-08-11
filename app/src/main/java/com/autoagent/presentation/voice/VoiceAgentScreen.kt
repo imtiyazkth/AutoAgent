@@ -99,7 +99,8 @@ class VoiceAgentViewModel @Inject constructor(
             }
         }
     }
-fun agentSpeak(text: String) {
+
+    fun agentSpeak(text: String) {
         viewModelScope.launch {
             _agentState.value = AgentState.SPEAKING
             addMsg(text, true)
@@ -245,7 +246,8 @@ fun agentSpeak(text: String) {
             }
         }
     }
-private suspend fun executeNow(parsed: NaturalLanguageTaskParser.ParsedTask) {
+
+    private suspend fun executeNow(parsed: NaturalLanguageTaskParser.ParsedTask) {
         val svc = AutoAgentAccessibilityService.getInstance()
         if (svc == null) {
             agentSpeak("Accessibility service ON nahi hai. Settings mein enable karein.")
@@ -354,11 +356,13 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         }
         recognizer.startListening(i)
     }
+
     val autoListen by viewModel.autoListen.collectAsState()
     LaunchedEffect(autoListen) {
         if (autoListen) { delay(500); listen() }
     }
     LaunchedEffect(Unit) { delay(2200); listen() }
+
     DisposableEffect(Unit) {
         recognizer.setRecognitionListener(object : RecognitionListener {
             override fun onResults(r: Bundle?) {
@@ -379,7 +383,7 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         })
         onDispose { recognizer.destroy() }
     }
-    }
+
     Scaffold(
         topBar = {
             TopAppBar(
