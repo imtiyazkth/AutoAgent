@@ -345,7 +345,6 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         if (autoListen) { delay(500); listen() }
     }
     LaunchedEffect(Unit) { delay(2200); listen() }
-
     DisposableEffect(Unit) {
         recognizer.setRecognitionListener(object : RecognitionListener {
             override fun onResults(r: Bundle?) {
