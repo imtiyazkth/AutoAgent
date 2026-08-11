@@ -802,6 +802,37 @@ fun TaskBuilderScreen(
                 modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp),
                 leadingIcon = { Icon(Icons.Filled.TouchApp, null) }, singleLine = true)
 
+            Text("⚡ Quick Actions", fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.titleSmall)
+            val qBtns = listOf(
+                "Search" to "🔍", "Play" to "▶️", "Next" to "⏭️",
+                "Stop" to "⏹️", "Send" to "📤", "OK" to "✅",
+                "Back" to "◀️", "Skip" to "⏩", "Like" to "👍",
+                "Share" to "🔗", "Download" to "⬇️", "Subscribe" to "🔔"
+            )
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                qBtns.forEach { (btn, emoji) ->
+                    val sel = buttonText.split(",").map { it.trim() }.contains(btn)
+                    FilterChip(
+                        selected = sel,
+                        onClick = {
+                            buttonText = if (buttonText.isBlank()) btn
+                            else {
+                                val parts = buttonText.split(",").map { it.trim() }.toMutableList()
+                                if (sel) { parts.remove(btn); parts.joinToString(", ") }
+                                else { parts.add(btn); parts.joinToString(", ") }
+                            }
+                        },
+                        label = { Text("$emoji $btn", style = MaterialTheme.typography.labelSmall) },
+                        leadingIcon = if (sel) {{ Icon(Icons.Filled.Check, null, Modifier.size(12.dp)) }} else null
+                    )
+                }
+            }
+
             if (selectedApp != null || url.isNotBlank() || inputText.isNotBlank()) {
                 Divider()
                 Text("Preview", fontWeight = FontWeight.Bold,
