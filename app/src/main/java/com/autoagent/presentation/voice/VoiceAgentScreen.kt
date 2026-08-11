@@ -72,6 +72,8 @@ class VoiceAgentViewModel @Inject constructor(
     val agentState: StateFlow<AgentState> = _agentState
 
     private val _partialText = MutableStateFlow("")
+    private val _autoListen = MutableStateFlow(false)
+    val autoListen: StateFlow<Boolean> = _autoListen
     val partialText: StateFlow<String> = _partialText
 
     private var pendingParsed: NaturalLanguageTaskParser.ParsedTask? = null
@@ -335,23 +337,14 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
     val pulse by inf.animateFloat(1f, 1.3f,
         infiniteRepeatable(tween(600, easing = EaseInOut), RepeatMode.Reverse), label = "p")
 
-    LaunchedEffect(messages.size) {
-
-    // Auto-listen: jab agent WAITING_FOLLOWUP ho to mic automatically on ho
-    LaunchedEffect(agentState) {
-        if (agentState == AgentState.WAITING_FOLLOWUP && !isListening) {
-            delay(800) // Agent ke bolne ke baad thoda ruko
-            listen()
-        }
-    }
-
-    // App khulte hi auto-listen shuru karo
-    LaunchedEffect(Unit) {
-        delay(2000) // Greeting ke baad
-        listen()
-    }
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
+
+    val autoListen by viewModel.autoListen.collectAsState()
+    LaunchedEffect(autoListen) {
+        if (autoListen) { delay(500); listen() }
+    }
+    LaunchedEffect(Unit) { delay(2200); listen() }
 
     DisposableEffect(Unit) {
         recognizer.setRecognitionListener(object : RecognitionListener {
