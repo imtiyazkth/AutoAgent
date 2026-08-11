@@ -170,7 +170,11 @@ class NaturalLanguageTaskParser @Inject constructor() {
         delR.find(text)?.groupValues?.getOrNull(1)?.toIntOrNull()?.let { delayMinutes = it }
 
         val srchR = Regex("""(?:search|dhundo|khojo|search karo)\s+(.+?)(?:\s+and|\s+aur|\s+phir|\s+then|$)""", RegexOption.IGNORE_CASE)
+        val playR = Regex("""(?:play|chalao|bajao|lagao|suno)\s+(.+?)(?:\s+(?:ka gana|song|music|video|wala|ki video))?(?:\s+and|\s+aur|\s+phir|\s+then|$)""", RegexOption.IGNORE_CASE)
+        val artistR = Regex("""(.+?)\s+(?:ka gana|ka song|ki song|songs?|music|gane)""", RegexOption.IGNORE_CASE)
         val searchQuery = srchR.find(input)?.groupValues?.getOrNull(1)?.trim()
+            ?: playR.find(input)?.groupValues?.getOrNull(1)?.trim()
+            ?: if (isPlay) artistR.find(input)?.groupValues?.getOrNull(1)?.trim() else null
 
         val duration = detectDurationMs(text)
 

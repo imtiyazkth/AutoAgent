@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -92,6 +93,14 @@ fun AiTaskScreen(
     viewModel: AiTaskViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+
+    // Auto-create task when confidence is high enough
+    LaunchedEffect(state.parsed) {
+        val parsed = state.parsed
+        if (parsed != null && parsed.confidence >= 0.80f) {
+            onTaskParsed(parsed)
+        }
+    }
 
     Scaffold(
         topBar = {
