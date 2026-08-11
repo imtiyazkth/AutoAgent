@@ -341,6 +341,19 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
     }
 
+    fun listen() {
+        if (isListening) { recognizer.stopListening(); isListening = false; return }
+        isListening = true
+        showKeyboard = false
+        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        }
+        recognizer.startListening(i)
+    }
     val autoListen by viewModel.autoListen.collectAsState()
     LaunchedEffect(autoListen) {
         if (autoListen) { delay(500); listen() }
@@ -366,19 +379,6 @@ fun VoiceAgentScreen(onBack: () -> Unit, viewModel: VoiceAgentViewModel = hiltVi
         })
         onDispose { recognizer.destroy() }
     }
-
-    fun listen() {
-        if (isListening) { recognizer.stopListening(); isListening = false; return }
-        isListening = true
-        showKeyboard = false
-        val i = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN")
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "hi-IN")
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        }
-        recognizer.startListening(i)
     }
     Scaffold(
         topBar = {
