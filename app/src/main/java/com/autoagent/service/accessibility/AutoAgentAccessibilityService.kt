@@ -346,11 +346,34 @@ class AutoAgentAccessibilityService : AccessibilityService() {
     fun pressSearchKey(): Boolean {
         val root = rootInActiveWindow ?: return false
         val edit = findEditableNode(root) ?: return false
-        val args = Bundle().apply {
-            putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
-                AccessibilityNodeInfo.MOVEMENT_GRANULARITY_LINE)
-        }
-        return edit.performAction(AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY, args)
+
+        // Method 1: IME_ACTION_SEARCH
+        val args = Bundle()
+        args.putInt(
+            "action_code",
+            android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH
+        )
+        if (edit.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, args)) return true
+
+        // Method 2: ACTION_NEXT_AT_MOVEMENT_GRANULARITY (triggers keyboard action)
+        val args2 = Bundle()
+        args2.putInt(
+            AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
+            AccessibilityNodeInfo.MOVEMENT_GRANULARITY_LINE
+        )
+        args2.putBoolean(
+            AccessibilityNodeInfo.ACTION_ARGUMENT_EXTEND_SELECTION_BOOLEAN, false
+        )
+        if (edit.performAction(AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY, args2)) return true
+
+        // Method 3: Tap the search/go button on keyboard by coordinate
+        val dm = resources.displayMetrics
+        val path = android.graphics.Path()
+        path.moveTo(dm.widthPixels * 0.92f, dm.heightPixels * 0.875f)
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 80))
+            .build()
+        return dispatchGesture(gesture, null, null)
     }
 
     fun scrollDown(): Boolean {

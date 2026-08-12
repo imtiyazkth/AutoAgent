@@ -17,7 +17,7 @@ object GoalPlanner {
         if (g.hasAny("youtube", "yt")) {
             val query = g.extractQuery(
                 "search","dhundo","play","chalao","bajao","lagao","suno","find","dekhna"
-            ) ?: g.extractArtist()
+            ) ?: g.extractYouTubeQuery() ?: g.extractArtist()
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "com.google.android.youtube", "YouTube kholo")
             steps += Step(Intent.WAIT, "3500")
@@ -160,8 +160,26 @@ object GoalPlanner {
             val i = this.indexOf(kw); if (i < 0) continue
             val after = this.substring(i + kw.length).trim()
                 .removePrefix("karo").removePrefix("kar").trim()
-                .split(Regex("\\s+(aur|and|then|phir|ke baad)\\s+"))[0].trim()
-            if (after.length > 1) return after
+            // Stop at conjunctions — we only want the search query part
+            val query = after.split(Regex("\\s+(aur|and|then|phir|ke baad|aur use|and then|phir use)\\s+"))[0].trim()
+                .removePrefix("mein").removePrefix("pe").removePrefix("par").trim()
+            if (query.length > 1 && query.length < 60) return query
+        }
+        return null
+    }
+
+    private fun String.extractYouTubeQuery(): String? {
+        // Handle: "youtube mein jao aur arijeet singh ka gana search karo"
+        // Pattern: after "aur" find the actual search subject
+        val aurIdx = this.indexOf(" aur ")
+        if (aurIdx >= 0) {
+            val afterAur = this.substring(aurIdx + 5).trim()
+            // Extract subject before action verbs
+            val query = afterAur
+                .split(Regex("\\s+(search karo|search|dhundo|play karo|play|bajao|lagao|suno|chalao)\\s*"))[0]
+                .trim()
+                .removePrefix("ka gana").removePrefix("ki song").removePrefix("ka song").trim()
+            if (query.length > 1 && query.length < 50) return query
         }
         return null
     }
