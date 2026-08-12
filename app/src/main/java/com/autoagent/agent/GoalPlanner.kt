@@ -4,7 +4,7 @@ data class Plan(val steps: List<Step>, val appPkg: String)
 data class Step(val intent: Intent, val target: String = "", val desc: String = "")
 
 enum class Intent {
-    LAUNCH_APP, TAP, TYPE, SEARCH_KEY, SCROLL, WAIT, HOME, BACK
+    LAUNCH_APP, TAP, TAP_SEARCH_BAR, TAP_FIRST_RESULT, TYPE, SEARCH_KEY, SCROLL, WAIT, HOME, BACK
 }
 
 object GoalPlanner {
@@ -17,16 +17,18 @@ object GoalPlanner {
                 ?: g.extractArtist()
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "com.google.android.youtube", "YouTube kholo")
-            steps += Step(Intent.WAIT, "2500")
+            steps += Step(Intent.WAIT, "3000")
             if (query != null) {
-                steps += Step(Intent.TAP, "Search YouTube", "Search bar tap")
-                steps += Step(Intent.WAIT, "800")
+                // Try multiple search bar identifiers
+                steps += Step(Intent.TAP_SEARCH_BAR, "", "Search bar tap karo")
+                steps += Step(Intent.WAIT, "1000")
                 steps += Step(Intent.TYPE, query, "Type: $query")
+                steps += Step(Intent.WAIT, "500")
                 steps += Step(Intent.SEARCH_KEY, "", "Search karo")
-                steps += Step(Intent.WAIT, "2000", "Results aane do")
+                steps += Step(Intent.WAIT, "2500", "Results aane do")
                 if (g.hasAny("play","chalao","bajao","lagao","suno","dekhna","sunna")) {
-                    steps += Step(Intent.SCROLL, "", "Scroll")
-                    steps += Step(Intent.TAP, query.split(" ").first(), "Pehla result tap")
+                    steps += Step(Intent.WAIT, "1000")
+                    steps += Step(Intent.TAP_FIRST_RESULT, query, "Pehla result play karo")
                 }
             }
             return Plan(steps, "com.google.android.youtube")
@@ -152,9 +154,16 @@ object GoalPlanner {
         Regex("""(.+?)\s+(?:ka gana|ka song|ki song|songs?|music|gane|bajao|lagao|suno)""")
             .find(this)?.groupValues?.getOrNull(1)?.trim()
 
-    private fun String.extractContact(): String? =
-        Regex("""(?:to|ko|send to|message|text|bolo)\s+([a-zA-Z\s]{2,25})(?:\s+(?:text|message|bolo|kaho|likho|send|aur|and)|$)""")
-            .find(this)?.groupValues?.getOrNull(1)?.trim()
+    private fun String.extractContact(): String? {
+        val p1 = Regex("""(?:search|dhundo|find)\s+([a-zA-Z\s]{2,25})(?:\s+(?:text|message|ko|se)|$)""")
+        val p2 = Regex("""(?:to|ko|send to)\s+([a-zA-Z\s]{2,25})(?:\s+(?:text|message|bolo|send|aur)|$)""")
+        val p3 = Regex("""([a-zA-Z\s]{2,20})\s+(?:ko text|ko message|ko)\s""")
+        for (p in listOf(p1, p2, p3)) {
+            val r = p.find(this)?.groupValues?.getOrNull(1)?.trim()
+            if (!r.isNullOrBlank()) return r
+        }
+        return null
+    }
 
     private fun String.extractMessage(): String? {
         Regex("""['\"](.*?)['\"]""").find(this)?.let { return it.groupValues[1] }
