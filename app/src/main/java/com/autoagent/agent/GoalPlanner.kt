@@ -13,28 +13,31 @@ object GoalPlanner {
     fun plan(raw: String): Plan {
         val g = raw.lowercase().trim()
 
-        // ── YouTube ───────────────────────────────────────────────────────
+        // ── YouTube ───────────────────────────────────────────────
         if (g.hasAny("youtube", "yt")) {
-            val query = g.extractQuery("search","dhundo","play","chalao","bajao","lagao","suno","find")
-                ?: g.extractArtist()
+            val query = g.extractQuery(
+                "search","dhundo","play","chalao","bajao","lagao","suno","find","dekhna"
+            ) ?: g.extractArtist()
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "com.google.android.youtube", "YouTube kholo")
-            steps += Step(Intent.WAIT, "3000")
+            steps += Step(Intent.WAIT, "3500")
             if (query != null) {
-                steps += Step(Intent.TAP_SEARCH_BAR, "", "Search bar tap")
+                steps += Step(Intent.TAP_SEARCH_BAR, "youtube", "Search bar tap")
                 steps += Step(Intent.WAIT, "1200")
                 steps += Step(Intent.TYPE, query, "Type: $query")
                 steps += Step(Intent.WAIT, "600")
                 steps += Step(Intent.SEARCH_KEY, "", "Search karo")
                 steps += Step(Intent.WAIT, "3000", "Results aane do")
                 if (g.hasAny("play","chalao","bajao","lagao","suno","dekhna","sunna","first","pehla")) {
+                    steps += Step(Intent.SCROLL, "", "Thoda scroll")
+                    steps += Step(Intent.WAIT, "800")
                     steps += Step(Intent.TAP_FIRST_RESULT, query, "Pehla result play karo")
                 }
             }
             return Plan(steps, "com.google.android.youtube")
         }
 
-        // ── WhatsApp ──────────────────────────────────────────────────────
+        // ── WhatsApp ──────────────────────────────────────────────
         if (g.hasAny("whatsapp","whats app","watsapp")) {
             val contact = g.extractContact()
             val message = g.extractMessage()
@@ -45,7 +48,7 @@ object GoalPlanner {
                 steps += Step(Intent.TAP_SEARCH_BAR, "whatsapp", "Search tap")
                 steps += Step(Intent.WAIT, "800")
                 steps += Step(Intent.TYPE, contact, "Contact: $contact")
-                steps += Step(Intent.WAIT, "1500")
+                steps += Step(Intent.WAIT, "1800")
                 steps += Step(Intent.TAP_FIRST_RESULT, contact, "Contact tap")
                 steps += Step(Intent.WAIT, "1500")
             }
@@ -53,13 +56,13 @@ object GoalPlanner {
                 steps += Step(Intent.TAP, "Type a message", "Message box tap")
                 steps += Step(Intent.WAIT, "800")
                 steps += Step(Intent.TYPE, message, "Message: $message")
-                steps += Step(Intent.WAIT, "600")
+                steps += Step(Intent.WAIT, "500")
                 steps += Step(Intent.TAP, "Send", "Send karo")
             }
             return Plan(steps, "com.whatsapp")
         }
 
-        // ── Telegram ──────────────────────────────────────────────────────
+        // ── Telegram ──────────────────────────────────────────────
         if (g.hasAny("telegram")) {
             val contact = g.extractContact()
             val message = g.extractMessage()
@@ -81,7 +84,7 @@ object GoalPlanner {
             return Plan(steps, "org.telegram.messenger")
         }
 
-        // ── Instagram ─────────────────────────────────────────────────────
+        // ── Instagram ─────────────────────────────────────────────
         if (g.hasAny("instagram","insta")) {
             val query = g.extractQuery("search","find","dhundo")
             val steps = mutableListOf<Step>()
@@ -97,8 +100,8 @@ object GoalPlanner {
             return Plan(steps, "com.instagram.android")
         }
 
-        // ── Chrome / Google ───────────────────────────────────────────────
-        if (g.hasAny("chrome","browser","google karo","search karo","google me")) {
+        // ── Chrome ────────────────────────────────────────────────
+        if (g.hasAny("chrome","browser","google karo","google me","search karo")) {
             val query = g.extractQuery("search","google","find","dhundo") ?: g
             return Plan(listOf(
                 Step(Intent.LAUNCH_APP, "com.android.chrome", "Chrome kholo"),
@@ -110,8 +113,8 @@ object GoalPlanner {
             ), "com.android.chrome")
         }
 
-        // ── Spotify ───────────────────────────────────────────────────────
-        if (g.hasAny("spotify","music app")) {
+        // ── Spotify ───────────────────────────────────────────────
+        if (g.hasAny("spotify")) {
             val query = g.extractQuery("play","search","suno","bajao","lagao") ?: g.extractArtist() ?: g
             return Plan(listOf(
                 Step(Intent.LAUNCH_APP, "com.spotify.music", "Spotify kholo"),
@@ -124,12 +127,12 @@ object GoalPlanner {
             ), "com.spotify.music")
         }
 
-        // ── Close/Home ────────────────────────────────────────────────────
-        if (g.hasAny("band karo","close karo","home pe jao","ghar jao","home jao")) {
+        // ── Close/Home ────────────────────────────────────────────
+        if (g.hasAny("band karo","close karo","home pe jao","ghar jao")) {
             return Plan(listOf(Step(Intent.HOME, "", "Home pe jao")), "")
         }
 
-        // ── Generic apps ──────────────────────────────────────────────────
+        // ── Generic apps ──────────────────────────────────────────
         val apps = mapOf(
             "settings" to "com.android.settings",
             "camera"   to "com.android.camera2",
@@ -168,10 +171,12 @@ object GoalPlanner {
             .find(this)?.groupValues?.getOrNull(1)?.trim()
 
     private fun String.extractContact(): String? {
-        val p1 = Regex("""(?:search|dhundo|find)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|ko|se|aur|and)|$)""")
-        val p2 = Regex("""(?:to|ko|send to)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|bolo|kaho|send|aur)|$)""")
-        val p3 = Regex("""([a-zA-Z][a-zA-Z\s]{1,15})\s+(?:ko text|ko message|ko|se baat)""")
-        for (p in listOf(p1, p2, p3)) {
+        val patterns = listOf(
+            Regex("""(?:search|dhundo|find)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|ko|se|aur)|$)"""),
+            Regex("""(?:to|ko|send to)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|bolo|send|aur)|$)"""),
+            Regex("""([a-zA-Z][a-zA-Z\s]{1,15})\s+(?:ko text|ko message|ko|se baat)""")
+        )
+        for (p in patterns) {
             val r = p.find(this)?.groupValues?.getOrNull(1)?.trim()
             if (!r.isNullOrBlank() && r.length > 1) return r
         }

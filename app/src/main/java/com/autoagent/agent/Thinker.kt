@@ -29,7 +29,7 @@ object Thinker {
             if (screen.pkg == step.target)
                 Decision("App already open", Action.None, "Skip", skip = true)
             else
-                Decision("${step.desc}", Action.Launch(step.target), step.desc)
+                Decision(step.desc, Action.Launch(step.target), step.desc)
         }
 
         Intent.TAP -> {
@@ -43,16 +43,16 @@ object Thinker {
             Decision("Search bar tap", Action.TapSearchBar(step.target), "Search bar tap")
 
         Intent.TAP_FIRST_RESULT -> {
-            // Look for any result text on screen that matches query words
+            // Try text-based tap from screen first
             val queryWords = step.target.split(" ").filter { it.length > 2 }
             val matchedText = queryWords.firstOrNull { w ->
                 screen.clickable.any { it.contains(w, ignoreCase = true) }
             }
             if (matchedText != null) {
                 val clickableText = screen.clickable.first { it.contains(matchedText, ignoreCase = true) }
-                Decision("Result mila: $clickableText", Action.Tap(clickableText), "Tap result: $clickableText")
+                Decision("Result mila: $clickableText", Action.Tap(clickableText), "Tap: $clickableText")
             } else {
-                Decision("Result tap (coordinate)", Action.TapFirstResult(step.target), "Tap first result")
+                Decision("Result tap by coordinate", Action.TapFirstResult(step.target), "Tap first result")
             }
         }
 

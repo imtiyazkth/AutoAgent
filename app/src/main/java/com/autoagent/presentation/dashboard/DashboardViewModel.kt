@@ -3,6 +3,7 @@ package com.autoagent.personal.presentation.dashboard
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.autoagent.personal.agent.ReactAgent
 import com.autoagent.personal.data.db.ExecutionLogEntity
 import com.autoagent.personal.data.db.TaskEntity
 import com.autoagent.personal.data.repository.AgentRepository
@@ -187,12 +188,27 @@ class DashboardViewModel @Inject constructor(
                 val entity = withContext(Dispatchers.IO) { repository.getTask(taskId) }
                     ?: return@launch
                 val task = gsonHelper.entityToTask(entity)
-                L.d("DashVM", "Running task: ${task.name}")
-                TaskExecutorWorker.scheduleTask(context, task.copy(
-                    triggerType = com.autoagent.personal.domain.model.TriggerType.MANUAL
-                ))
+                L.d("DashVM", "Running task via ReactAgent: ${task.name}")
                 _uiState.update { it.copy(lastRunResult = "▶️ ${task.name} start hua") }
                 memoryEngine.saveLastCommand("Run: ${task.name}")
+
+                // Use ReactAgent directly — opens actual app and does the task
+                val agent = ReactAgent()
+                agent.onDone = { success, msg ->
+                    _uiState.update { it.copy(
+                        lastRunResult = if (success) "✅ ${task.name} complete hua" else "⚠️ $msg"
+                    )}
+                }
+                withContext(Dispatchers.IO) {
+                    agent.execute(task.name)
+                }
+                withContext(Dispatchers.IO) {
+                    repository.updateTaskLastRun(
+                        taskId,
+                        System.currentTimeMillis(),
+                        com.autoagent.personal.domain.model.RunStatus.SUCCESS
+                    )
+                }
             } catch (e: Exception) {
                 L.e("DashVM", "runTaskNow error", e)
                 _uiState.update { it.copy(error = "Task start nahi hua: ${e.message}") }
