@@ -171,11 +171,6 @@ object GoalPlanner {
             .find(this)?.groupValues?.getOrNull(1)?.trim()
 
     private fun String.extractContact(): String? {
-        val patterns = listOf(
-            Regex("""(?:search|dhundo|find)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|ko|se|aur)|$)"""),
-            Regex("""(?:to|ko|send to)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|bolo|send|aur)|$)"""),
-            Regex("""([a-zA-Z][a-zA-Z\s]{1,15})\s+(?:ko text|ko message|ko|se baat)""")
-    private fun String.extractContact(): String? {
         val p1 = Regex("""(?:search|dhundo|find)\s+([a-zA-Z][a-zA-Z ]{1,20})(?:\s+(?:text|message|ko|se|aur)|$)""")
         val p2 = Regex("""(?:to|ko|send to)\s+([a-zA-Z][a-zA-Z ]{1,20})(?:\s+(?:text|message|bolo|send|aur)|$)""")
         val p3 = Regex("""([a-zA-Z][a-zA-Z ]{1,15})\s+(?:ko text|ko message|ko)""")
@@ -185,7 +180,9 @@ object GoalPlanner {
         }
         return null
     }
-        Regex("""['""](.*?)['"""]""").find(this)?.let { return it.groupValues[1] }
+
+    private fun String.extractMessage(): String? {
+        Regex("""['\""](.*?)['\""]""").find(this)?.let { return it.groupValues[1] }
         return Regex("""(?:text|message|bolo|likho|kaho|bol|type)[:\s]+(.+?)(?:\s+(?:aur|and|send)|$)""")
             .find(this)?.groupValues?.getOrNull(1)?.trim()
     }
