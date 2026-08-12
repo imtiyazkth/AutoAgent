@@ -12,7 +12,7 @@ sealed class Action {
     object None : Action()
     data class Launch(val pkg: String) : Action()
     data class Tap(val text: String) : Action()
-    object TapSearchBar : Action()
+    data class TapSearchBar(val appHint: String) : Action()
     data class TapFirstResult(val query: String) : Action()
     data class Type(val text: String) : Action()
     object SearchKey : Action()
@@ -29,33 +29,31 @@ object Thinker {
             if (screen.pkg == step.target)
                 Decision("App already open", Action.None, "Skip", skip = true)
             else
-                Decision("${step.desc} launch", Action.Launch(step.target), step.desc)
+                Decision("${step.desc}", Action.Launch(step.target), step.desc)
         }
 
         Intent.TAP -> {
             if (screen.hasText(step.target) || screen.hasClickable(step.target))
-                Decision("'${step.target}' mila — tap", Action.Tap(step.target), "Tap: ${step.target}")
+                Decision("'${step.target}' mila", Action.Tap(step.target), "Tap: ${step.target}")
             else
                 Decision("'${step.target}' nahi mila — scroll", Action.Scroll, "Scroll")
         }
 
-        Intent.TAP_SEARCH_BAR -> {
-            // Try multiple search bar texts YouTube uses
-            val searchTexts = listOf("Search YouTube", "Search", "search_bar", "Search...")
-            val found = searchTexts.firstOrNull { screen.hasText(it) || screen.hasClickable(it) }
-            if (found != null)
-                Decision("Search bar mila: $found", Action.Tap(found), "Search bar tap")
-            else
-                Decision("Search bar dhundh raha hoon", Action.TapSearchBar, "Search bar tap")
-        }
+        Intent.TAP_SEARCH_BAR ->
+            Decision("Search bar tap", Action.TapSearchBar(step.target), "Search bar tap")
 
         Intent.TAP_FIRST_RESULT -> {
-            val query = step.target
-            val firstWord = query.split(" ").first()
-            if (screen.hasText(firstWord) || screen.hasClickable(firstWord))
-                Decision("Result mila — tap", Action.Tap(firstWord), "Play: $firstWord")
-            else
-                Decision("Result dhundh raha — scroll", Action.Scroll, "Scroll results")
+            // Look for any result text on screen that matches query words
+            val queryWords = step.target.split(" ").filter { it.length > 2 }
+            val matchedText = queryWords.firstOrNull { w ->
+                screen.clickable.any { it.contains(w, ignoreCase = true) }
+            }
+            if (matchedText != null) {
+                val clickableText = screen.clickable.first { it.contains(matchedText, ignoreCase = true) }
+                Decision("Result mila: $clickableText", Action.Tap(clickableText), "Tap result: $clickableText")
+            } else {
+                Decision("Result tap (coordinate)", Action.TapFirstResult(step.target), "Tap first result")
+            }
         }
 
         Intent.TYPE -> {

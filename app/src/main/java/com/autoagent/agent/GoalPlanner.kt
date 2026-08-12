@@ -4,7 +4,8 @@ data class Plan(val steps: List<Step>, val appPkg: String)
 data class Step(val intent: Intent, val target: String = "", val desc: String = "")
 
 enum class Intent {
-    LAUNCH_APP, TAP, TAP_SEARCH_BAR, TAP_FIRST_RESULT, TYPE, SEARCH_KEY, SCROLL, WAIT, HOME, BACK
+    LAUNCH_APP, TAP, TAP_SEARCH_BAR, TAP_FIRST_RESULT,
+    TYPE, SEARCH_KEY, SCROLL, WAIT, HOME, BACK
 }
 
 object GoalPlanner {
@@ -12,111 +13,123 @@ object GoalPlanner {
     fun plan(raw: String): Plan {
         val g = raw.lowercase().trim()
 
-        if (g.hasAny("youtube","yt")) {
+        // ── YouTube ───────────────────────────────────────────────────────
+        if (g.hasAny("youtube", "yt")) {
             val query = g.extractQuery("search","dhundo","play","chalao","bajao","lagao","suno","find")
                 ?: g.extractArtist()
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "com.google.android.youtube", "YouTube kholo")
             steps += Step(Intent.WAIT, "3000")
             if (query != null) {
-                // Try multiple search bar identifiers
-                steps += Step(Intent.TAP_SEARCH_BAR, "", "Search bar tap karo")
-                steps += Step(Intent.WAIT, "1000")
+                steps += Step(Intent.TAP_SEARCH_BAR, "", "Search bar tap")
+                steps += Step(Intent.WAIT, "1200")
                 steps += Step(Intent.TYPE, query, "Type: $query")
-                steps += Step(Intent.WAIT, "500")
+                steps += Step(Intent.WAIT, "600")
                 steps += Step(Intent.SEARCH_KEY, "", "Search karo")
-                steps += Step(Intent.WAIT, "2500", "Results aane do")
-                if (g.hasAny("play","chalao","bajao","lagao","suno","dekhna","sunna")) {
-                    steps += Step(Intent.WAIT, "1000")
+                steps += Step(Intent.WAIT, "3000", "Results aane do")
+                if (g.hasAny("play","chalao","bajao","lagao","suno","dekhna","sunna","first","pehla")) {
                     steps += Step(Intent.TAP_FIRST_RESULT, query, "Pehla result play karo")
                 }
             }
             return Plan(steps, "com.google.android.youtube")
         }
 
+        // ── WhatsApp ──────────────────────────────────────────────────────
         if (g.hasAny("whatsapp","whats app","watsapp")) {
             val contact = g.extractContact()
             val message = g.extractMessage()
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "com.whatsapp", "WhatsApp kholo")
-            steps += Step(Intent.WAIT, "2500")
+            steps += Step(Intent.WAIT, "3000")
             if (contact != null) {
-                steps += Step(Intent.TAP, "Search", "Search tap")
-                steps += Step(Intent.WAIT, "600")
+                steps += Step(Intent.TAP_SEARCH_BAR, "whatsapp", "Search tap")
+                steps += Step(Intent.WAIT, "800")
                 steps += Step(Intent.TYPE, contact, "Contact: $contact")
                 steps += Step(Intent.WAIT, "1500")
-                steps += Step(Intent.TAP, contact, "Contact tap")
-                steps += Step(Intent.WAIT, "1200")
+                steps += Step(Intent.TAP_FIRST_RESULT, contact, "Contact tap")
+                steps += Step(Intent.WAIT, "1500")
             }
             if (message != null) {
                 steps += Step(Intent.TAP, "Type a message", "Message box tap")
-                steps += Step(Intent.WAIT, "600")
+                steps += Step(Intent.WAIT, "800")
                 steps += Step(Intent.TYPE, message, "Message: $message")
-                steps += Step(Intent.WAIT, "500")
+                steps += Step(Intent.WAIT, "600")
                 steps += Step(Intent.TAP, "Send", "Send karo")
             }
             return Plan(steps, "com.whatsapp")
         }
 
+        // ── Telegram ──────────────────────────────────────────────────────
         if (g.hasAny("telegram")) {
             val contact = g.extractContact()
             val message = g.extractMessage()
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "org.telegram.messenger", "Telegram kholo")
-            steps += Step(Intent.WAIT, "2500")
+            steps += Step(Intent.WAIT, "3000")
             if (contact != null) {
-                steps += Step(Intent.TAP, "Search", "Search tap")
+                steps += Step(Intent.TAP_SEARCH_BAR, "telegram", "Search tap")
                 steps += Step(Intent.TYPE, contact, "Contact: $contact")
-                steps += Step(Intent.WAIT, "1200")
-                steps += Step(Intent.TAP, contact, "Contact tap")
+                steps += Step(Intent.WAIT, "1500")
+                steps += Step(Intent.TAP_FIRST_RESULT, contact, "Contact tap")
                 steps += Step(Intent.WAIT, "1000")
             }
             if (message != null) {
                 steps += Step(Intent.TYPE, message, "Message: $message")
+                steps += Step(Intent.WAIT, "500")
                 steps += Step(Intent.TAP, "Send", "Send")
             }
             return Plan(steps, "org.telegram.messenger")
         }
 
+        // ── Instagram ─────────────────────────────────────────────────────
         if (g.hasAny("instagram","insta")) {
             val query = g.extractQuery("search","find","dhundo")
             val steps = mutableListOf<Step>()
             steps += Step(Intent.LAUNCH_APP, "com.instagram.android", "Instagram kholo")
-            steps += Step(Intent.WAIT, "2500")
+            steps += Step(Intent.WAIT, "3000")
             if (query != null) {
-                steps += Step(Intent.TAP, "Search", "Search tap")
+                steps += Step(Intent.TAP_SEARCH_BAR, "instagram", "Search tap")
                 steps += Step(Intent.TYPE, query, "Search: $query")
                 steps += Step(Intent.SEARCH_KEY)
+                steps += Step(Intent.WAIT, "2000")
+                steps += Step(Intent.TAP_FIRST_RESULT, query, "Pehla result")
             }
             return Plan(steps, "com.instagram.android")
         }
 
+        // ── Chrome / Google ───────────────────────────────────────────────
         if (g.hasAny("chrome","browser","google karo","search karo","google me")) {
             val query = g.extractQuery("search","google","find","dhundo") ?: g
             return Plan(listOf(
                 Step(Intent.LAUNCH_APP, "com.android.chrome", "Chrome kholo"),
                 Step(Intent.WAIT, "2500"),
-                Step(Intent.TAP, "Search or type URL", "Address bar tap"),
+                Step(Intent.TAP_SEARCH_BAR, "chrome", "Address bar tap"),
+                Step(Intent.WAIT, "800"),
                 Step(Intent.TYPE, query, "Search: $query"),
                 Step(Intent.SEARCH_KEY)
             ), "com.android.chrome")
         }
 
+        // ── Spotify ───────────────────────────────────────────────────────
         if (g.hasAny("spotify","music app")) {
             val query = g.extractQuery("play","search","suno","bajao","lagao") ?: g.extractArtist() ?: g
             return Plan(listOf(
                 Step(Intent.LAUNCH_APP, "com.spotify.music", "Spotify kholo"),
                 Step(Intent.WAIT, "2500"),
-                Step(Intent.TAP, "Search", "Search tap"),
+                Step(Intent.TAP_SEARCH_BAR, "spotify", "Search tap"),
                 Step(Intent.TYPE, query, "Search: $query"),
-                Step(Intent.SEARCH_KEY)
+                Step(Intent.SEARCH_KEY),
+                Step(Intent.WAIT, "2000"),
+                Step(Intent.TAP_FIRST_RESULT, query, "Play")
             ), "com.spotify.music")
         }
 
+        // ── Close/Home ────────────────────────────────────────────────────
         if (g.hasAny("band karo","close karo","home pe jao","ghar jao","home jao")) {
             return Plan(listOf(Step(Intent.HOME, "", "Home pe jao")), "")
         }
 
+        // ── Generic apps ──────────────────────────────────────────────────
         val apps = mapOf(
             "settings" to "com.android.settings",
             "camera"   to "com.android.camera2",
@@ -155,19 +168,19 @@ object GoalPlanner {
             .find(this)?.groupValues?.getOrNull(1)?.trim()
 
     private fun String.extractContact(): String? {
-        val p1 = Regex("""(?:search|dhundo|find)\s+([a-zA-Z\s]{2,25})(?:\s+(?:text|message|ko|se)|$)""")
-        val p2 = Regex("""(?:to|ko|send to)\s+([a-zA-Z\s]{2,25})(?:\s+(?:text|message|bolo|send|aur)|$)""")
-        val p3 = Regex("""([a-zA-Z\s]{2,20})\s+(?:ko text|ko message|ko)\s""")
+        val p1 = Regex("""(?:search|dhundo|find)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|ko|se|aur|and)|$)""")
+        val p2 = Regex("""(?:to|ko|send to)\s+([a-zA-Z][a-zA-Z\s]{1,20})(?:\s+(?:text|message|bolo|kaho|send|aur)|$)""")
+        val p3 = Regex("""([a-zA-Z][a-zA-Z\s]{1,15})\s+(?:ko text|ko message|ko|se baat)""")
         for (p in listOf(p1, p2, p3)) {
             val r = p.find(this)?.groupValues?.getOrNull(1)?.trim()
-            if (!r.isNullOrBlank()) return r
+            if (!r.isNullOrBlank() && r.length > 1) return r
         }
         return null
     }
 
     private fun String.extractMessage(): String? {
-        Regex("""['\"](.*?)['\"]""").find(this)?.let { return it.groupValues[1] }
-        return Regex("""(?:text|message|bolo|likho|kaho|bol)[:\s]+(.+?)(?:\s+(?:aur|and|send)|$)""")
+        Regex("""['""](.*?)['"""]""").find(this)?.let { return it.groupValues[1] }
+        return Regex("""(?:text|message|bolo|likho|kaho|bol|type)[:\s]+(.+?)(?:\s+(?:aur|and|send)|$)""")
             .find(this)?.groupValues?.getOrNull(1)?.trim()
     }
 }

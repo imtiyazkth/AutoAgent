@@ -8,10 +8,13 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.*
 import com.autoagent.personal.data.db.ExecutionLogEntity
 import com.autoagent.personal.data.repository.AgentRepository
+import com.autoagent.personal.agent.ReactAgent
 import com.autoagent.personal.domain.model.*
 import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
 import com.autoagent.personal.util.GsonHelper
+import kotlinx.coroutines.withTimeout
 import dagger.assisted.Assisted
+import kotlinx.coroutines.withTimeout
 import dagger.assisted.AssistedInject
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -166,8 +169,28 @@ class TaskExecutorWorker @AssistedInject constructor(
             return if (runAttemptCount < MAX_RETRIES) Result.retry() else Result.failure()
         }
 
+        // Use ReactAgent for tasks that need real app interaction
+        val taskNameLower = task.name.lowercase()
+        val needsReactAgent = taskNameLower.contains("youtube") || taskNameLower.contains("whatsapp") ||
+            taskNameLower.contains("instagram") || taskNameLower.contains("telegram") ||
+            taskNameLower.contains("spotify") || taskNameLower.contains("chrome") ||
+            task.steps.any { it.type == ActionType.LAUNCH_APP }
+
         val stepLogs = mutableListOf<com.autoagent.personal.domain.model.StepLog>()
-        val status = service.executeSteps(task.steps) { stepLog -> stepLogs.add(stepLog) }
+        val status = if (needsReactAgent && task.steps.isNotEmpty()) {
+            // Build goal string from task name + steps
+            val goal = task.name
+            var agentSuccess = false
+            var agentDone = false
+            val agent = ReactAgent()
+            agent.onDone = { success, _ -> agentSuccess = success; agentDone = true }
+            kotlinx.coroutines.withTimeout(60_000) {
+                agent.execute(goal)
+            }
+            if (agentSuccess) RunStatus.SUCCESS else RunStatus.FAILED
+        } else {
+            service.executeSteps(task.steps) { stepLog -> stepLogs.add(stepLog) }
+        }
 
         repository.updateLog(
             logId = logId,

@@ -4,9 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Path
-import android.os.Bundle
 import android.util.Log
-import android.view.accessibility.AccessibilityNodeInfo
 import com.autoagent.personal.service.accessibility.AutoAgentAccessibilityService
 import kotlinx.coroutines.delay
 
@@ -15,9 +13,9 @@ object Actor {
 
     suspend fun perform(action: Action, svc: AutoAgentAccessibilityService): Boolean {
         return when (action) {
-            is Action.None      -> true
+            is Action.None   -> true
 
-            is Action.Launch    -> {
+            is Action.Launch -> {
                 try {
                     val i = svc.packageManager.getLaunchIntentForPackage(action.pkg) ?: return false
                     i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
@@ -27,65 +25,75 @@ object Actor {
                 } catch (e: Exception) { Log.e(TAG, "Launch: ${e.message}"); false }
             }
 
-            is Action.Tap       -> { delay(400); svc.tapText(action.text) }
+            is Action.Tap -> { delay(400); svc.tapText(action.text) }
 
-            // Smart search bar tap — tries text first, then coordinate tap at top of screen
             is Action.TapSearchBar -> {
                 delay(500)
-                val searchTexts = listOf("Search YouTube", "Search", "Search...")
-                val found = searchTexts.any { svc.tapText(it) }
-                if (!found) {
-                    // YouTube search bar is always near top — tap coordinate
-                    val dm = svc.resources.displayMetrics
-                    val w = dm.widthPixels.toFloat()
-                    val h = dm.heightPixels.toFloat()
-                    // Search bar is roughly at 50% width, 12% from top
-                    tapCoordinate(svc, w * 0.5f, h * 0.12f)
-                } else true
-            }
-
-            is Action.TapFirstResult -> {
-                delay(600)
-                // First result in YouTube is roughly at 50% width, 35% from top after search
                 val dm = svc.resources.displayMetrics
                 val w = dm.widthPixels.toFloat()
                 val h = dm.heightPixels.toFloat()
-                tapCoordinate(svc, w * 0.5f, h * 0.35f)
+
+                // App-specific search bar texts
+                val hint = action.appHint.lowercase()
+                val candidates = when {
+                    hint.contains("whatsapp") -> listOf("Search…", "Search", "Search or start new chat")
+                    hint.contains("telegram") -> listOf("Search", "Search for chats")
+                    hint.contains("chrome")   -> listOf("Search or type URL", "Search Google or type a URL")
+                    hint.contains("spotify")  -> listOf("Search", "Artists, songs, or podcasts")
+                    hint.contains("instagram")-> listOf("Search", "Search")
+                    else -> listOf("Search YouTube", "Search", "Search…", "Search or type URL")
+                }
+
+                // Try text-based tap first
+                val found = candidates.any { svc.tapText(it) }
+                if (found) {
+                    delay(600)
+                    true
+                } else {
+                    // Coordinate fallback — search bar is always near top
+                    val yPos = when {
+                        hint.contains("youtube") -> h * 0.085f  // YouTube search is very top
+                        hint.contains("whatsapp") -> h * 0.075f
+                        else -> h * 0.10f
+                    }
+                    tapCoord(svc, w * 0.5f, yPos)
+                    delay(600)
+                    true
+                }
             }
 
-            is Action.Type      -> { delay(300); svc.typeText(action.text) }
+            is Action.TapFirstResult -> {
+                delay(500)
+                val dm = svc.resources.displayMetrics
+                val w = dm.widthPixels.toFloat()
+                val h = dm.heightPixels.toFloat()
+                // First video result in YouTube after search is ~30-35% from top
+                tapCoord(svc, w * 0.5f, h * 0.32f)
+            }
+
+            is Action.Type -> { delay(300); svc.typeText(action.text) }
 
             is Action.SearchKey -> {
-                // Try IME search action first
-                val result = svc.pressSearchKey()
-                if (!result) {
-                    // Fallback: tap search/go button coordinate (bottom right of keyboard)
+                val ok = svc.pressSearchKey()
+                if (!ok) {
+                    // Tap the blue search button on keyboard (bottom right)
                     val dm = svc.resources.displayMetrics
-                    val w = dm.widthPixels.toFloat()
-                    val h = dm.heightPixels.toFloat()
-                    tapCoordinate(svc, w * 0.92f, h * 0.88f)
-                } else result
+                    tapCoord(svc, dm.widthPixels * 0.92f, dm.heightPixels * 0.875f)
+                } else ok
             }
 
-            is Action.Scroll    -> { svc.scrollDown(); delay(700); true }
-
-            is Action.Wait      -> { delay(action.ms); true }
-
-            is Action.Home      -> {
-                svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME); true
-            }
-
-            is Action.Back      -> {
-                svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); true
-            }
+            is Action.Scroll  -> { svc.scrollDown(); delay(700); true }
+            is Action.Wait    -> { delay(action.ms); true }
+            is Action.Home    -> { svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME); true }
+            is Action.Back    -> { svc.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); true }
         }
     }
 
-    private fun tapCoordinate(svc: AutoAgentAccessibilityService, x: Float, y: Float): Boolean {
+    private fun tapCoord(svc: AutoAgentAccessibilityService, x: Float, y: Float): Boolean {
         val path = Path().apply { moveTo(x, y) }
-        val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, 80))
+        val g = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
             .build()
-        return svc.dispatchGesture(gesture, null, null)
+        return svc.dispatchGesture(g, null, null)
     }
 }
