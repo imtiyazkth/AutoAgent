@@ -105,9 +105,15 @@ class EntityResolver @Inject constructor() {
     }
 
     fun resolveMessage(text: String): String? {
-        Regex("""['""](.*?)['"""]""").find(text)?.let { return it.groupValues[1] }
-        return Regex("""(?:text|message|bolo|likho|kaho|bol|type)[:\s]+(.+?)(?:\s+(?:aur|and|send)|$)""")
-            .find(text)?.groupValues?.getOrNull(1)?.trim()
+        // Check quoted message first
+        val quoteR = Regex("""['"](.*?)['"]""")
+        quoteR.find(text)?.let { return it.groupValues[1] }
+        // Check after keywords
+        val keyR = Regex("""(?:text|message|bolo|likho|kaho|bol|type)[:\s]+(.+)""")
+        val m = keyR.find(text) ?: return null
+        val after = m.groupValues[1].trim()
+        // Stop at conjunctions
+        return after.split(Regex("\s+(?:aur|and|send)\s+")).firstOrNull()?.trim()
     }
 
     fun resolveTime(text: String): String? {
