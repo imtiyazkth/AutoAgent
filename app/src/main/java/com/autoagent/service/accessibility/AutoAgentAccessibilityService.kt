@@ -272,7 +272,7 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun findEditableNode(
+    fun findEditableNode(
         node: AccessibilityNodeInfo,
         depth: Int = 0
     ): AccessibilityNodeInfo? {

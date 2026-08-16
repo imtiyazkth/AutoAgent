@@ -40,7 +40,7 @@ object AppModule {
     fun provideTaskDao(db: AutoAgentDatabase): TaskDao = db.taskDao()
 
     @Provides @Singleton
-    fun provideExecutionLogDao(db: AutoAgentDatabase): ExecutionLogDao = db.executionLogDao()
+    fun provideExecutionLogDao(db: AutoAgentDatabase): ExecutionLogDao = db.logDao()
 
     @Provides @Singleton
     fun provideAccessibilityTreeParser() = AccessibilityTreeParser()

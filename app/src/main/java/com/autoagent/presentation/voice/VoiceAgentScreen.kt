@@ -140,26 +140,23 @@ class VoiceAgentViewModel @Inject constructor(
             _agentState.value = AgentState.THINKING
             agentSpeak("Theek hai, shuru karta hoon!")
 
-            val agent = ReactAgent().also { reactAgent = it }
-
-            agent.onThought = { thought ->
+            agentController.onThought = { thought ->
                 viewModelScope.launch { addMsg("💭 $thought", true) }
             }
-            agent.onAction = { action ->
+            agentController.onAction = { action ->
                 viewModelScope.launch {
                     _agentState.value = AgentState.EXECUTING
                     addMsg("⚡ $action", true, isAction = true)
                 }
             }
-            agent.onDone = { _, message ->
+            agentController.onDone = { _, message ->
                 viewModelScope.launch {
                     _agentState.value = AgentState.WAITING_FOLLOWUP
                     agentSpeak(message)
-                    reactAgent = null
                 }
             }
 
-            withContext(Dispatchers.Default) { agent.execute(input) }
+            withContext(Dispatchers.Default) { agentController.execute(input) }
         }
     }
 
