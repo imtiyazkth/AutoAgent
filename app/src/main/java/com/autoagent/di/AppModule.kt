@@ -17,7 +17,6 @@ import com.autoagent.personal.engine.ConversationEngine
 import com.autoagent.personal.learning.ExperienceRecorder
 import com.autoagent.personal.perception.AccessibilityTreeParser
 import com.autoagent.personal.perception.ScreenObserver
-import com.autoagent.personal.phone.PhoneControlEngine
 import com.autoagent.personal.safety.RiskEngine
 import dagger.Module
 import dagger.Provides
@@ -86,8 +85,6 @@ object AppModule {
     @Provides @Singleton
     fun provideConversationEngine() = ConversationEngine()
 
-    @Provides @Singleton
-    fun providePhoneControlEngine(@ApplicationContext ctx: Context) = PhoneControlEngine(ctx)
 
     @Provides @Singleton
     fun provideAgentController(
