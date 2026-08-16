@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.autoagent.personal.agent.AgentController
 import com.autoagent.personal.agent.ReactAgent
 import com.autoagent.personal.ai.NaturalLanguageTaskParser
 import com.autoagent.personal.data.db.TaskEntity
@@ -120,15 +121,13 @@ class VoiceAgentViewModel @Inject constructor(
         handle(text)
     }
 
-    private var reactAgent: ReactAgent? = null
-
     private fun handle(input: String) {
         viewModelScope.launch {
             val lower = input.lowercase().trim()
 
             if (lower.contains("stop") || lower.contains("band karo") || lower.contains("ruk") || lower.contains("rok")) {
                 AutoAgentAccessibilityService.getInstance()?.triggerEmergencyStop()
-                reactAgent?.stop(); reactAgent = null
+                agentController.stop()
                 agentSpeak("Theek hai, ruk gaya!")
                 return@launch
             }
