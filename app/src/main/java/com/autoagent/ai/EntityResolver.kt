@@ -44,13 +44,23 @@ class EntityResolver @Inject constructor() {
     }
 
     fun resolveQuery(text: String, appName: String?): String? {
-        // Strategy 1: "aur X search/play karo"
-        val aurPattern = Regex(
-            """(?:aur|and)\s+([a-zA-Z\u0900-\u097F][a-zA-Z\u0900-\u097F\s]{1,50}?)\s+(?:search karo|search|play karo|play|bajao|lagao|suno|chalao|dhundo)""",
-            RegexOption.IGNORE_CASE
-        )
-        aurPattern.find(text)?.groupValues?.getOrNull(1)?.trim()
-            ?.let { if (it.length > 1) return cleanQuery(it) }
+        // Strategy 1: "aur X search/play karo" pattern
+        val aurIdx = text.indexOf(" aur ")
+        if (aurIdx >= 0) {
+            val afterAur = text.substring(aurIdx + 5).trim()
+            val actionVerbs = listOf(
+                "search karo","play karo","bajao","lagao","suno","chalao","dhundo","search","play"
+            )
+            for (verb in actionVerbs.sortedByDescending { it.length }) {
+                if (afterAur.contains(verb)) {
+                    val q = afterAur.substringBefore(verb).trim()
+                    if (q.length > 1 && q.length < 60) return cleanQuery(q)
+                }
+            }
+            // No verb found — use everything after "aur" as query
+            val q = afterAur.split(Regex("\\s+(aur|and|phir|then)\\s+"))[0].trim()
+            if (q.length > 1 && q.length < 60) return cleanQuery(q)
+        }
 
         // Strategy 2: after search keywords
         for (kw in listOf("search karo", "dhundo", "khojo", "find karo")) {
@@ -69,8 +79,8 @@ class EntityResolver @Inject constructor() {
         }
 
         // Strategy 4: artist patterns
-        Regex("""(.+?)\s+(?:ka gana|ka song|ki song|songs?|music|gane)""")
-            .find(text)?.groupValues?.getOrNull(1)?.trim()?.let { return it }
+        val artistR = Regex("""(.+?)\s+(?:ka gana|ka song|ki song|songs|music|gane)""")
+        artistR.find(text)?.groupValues?.getOrNull(1)?.trim()?.let { return it }
 
         return null
     }
@@ -79,7 +89,7 @@ class EntityResolver @Inject constructor() {
         .replace(Regex("\\s+ka gana$"), "")
         .replace(Regex("\\s+ki song$"), "")
         .replace(Regex("\\s+ka song$"), "")
-        .replace(Regex("\\s+songs?$"), "")
+        .replace(Regex("\\s+songs$"), "")
         .replace(Regex("^(?:mein|pe|par)\\s+"), "")
         .trim()
 
@@ -101,15 +111,13 @@ class EntityResolver @Inject constructor() {
     }
 
     fun resolveTime(text: String): String? {
-        Regex("""(\d{1,2})(?::(\d{2}))?\s*(am|pm|baje)?""", RegexOption.IGNORE_CASE)
-            .find(text)?.let { m ->
-                var h = m.groupValues[1].toIntOrNull() ?: return null
-                val mn = m.groupValues[2].toIntOrNull() ?: 0
-                val ap = m.groupValues[3].lowercase()
-                if (ap == "pm" && h < 12) h += 12
-                if (ap == "am" && h == 12) h = 0
-                return "%02d:%02d".format(h, mn)
-            }
-        return null
+        val m = Regex("""(\d{1,2})(?::(\d{2}))?\s*(am|pm|baje)?""", RegexOption.IGNORE_CASE).find(text)
+            ?: return null
+        var h = m.groupValues[1].toIntOrNull() ?: return null
+        val mn = m.groupValues[2].toIntOrNull() ?: 0
+        val ap = m.groupValues[3].lowercase()
+        if (ap == "pm" && h < 12) h += 12
+        if (ap == "am" && h == 12) h = 0
+        return "%02d:%02d".format(h, mn)
     }
 }
