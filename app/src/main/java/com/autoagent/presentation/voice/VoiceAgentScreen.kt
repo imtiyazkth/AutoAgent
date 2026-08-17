@@ -64,7 +64,8 @@ class VoiceAgentViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val parser: NaturalLanguageTaskParser,
     private val repository: AgentRepository,
-    private val memoryEngine: MemoryEngine
+    private val memoryEngine: MemoryEngine,
+    private val agentController: AgentController
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
