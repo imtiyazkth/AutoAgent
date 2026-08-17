@@ -157,7 +157,7 @@ class GoalDecomposer @Inject constructor() {
     }
 
     private fun decomposeOpenApp(cmd: ParsedCommand): AgentGoal {
-        val pkg = cmd.targetPkg ?: return AgentGoal("Unknown app", emptyList())
+        val pkg = cmd.targetPkg ?: return AgentGoal(description = "Unknown app", subGoals = emptyList())
         val name = cmd.targetApp ?: "App"
         return AgentGoal(
             description = "$name open",

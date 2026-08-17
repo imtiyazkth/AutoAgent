@@ -113,7 +113,7 @@ class EntityResolver @Inject constructor() {
         val m = keyR.find(text) ?: return null
         val after = m.groupValues[1].trim()
         // Stop at conjunctions
-        return after.split(Regex("\s+(?:aur|and|send)\s+")).firstOrNull()?.trim()
+        return after.split(" aur ").firstOrNull()?.split(" and ")?.firstOrNull()?.split(" send ")?.firstOrNull()?.trim()
     }
 
     fun resolveTime(text: String): String? {
