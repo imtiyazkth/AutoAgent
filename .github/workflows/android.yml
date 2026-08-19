@@ -29,6 +29,10 @@ jobs:
       - name: Clean
         run: ./gradlew clean
 
+      - name: Ensure KSP generated files removed
+        run: |
+          rm -rf app/build/generated/ksp || true
+
       - name: Run unit tests
         run: ./gradlew test --stacktrace
 
