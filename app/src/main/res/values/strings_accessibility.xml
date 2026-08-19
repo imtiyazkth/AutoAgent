@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_description">AutoAgent needs Accessibility permission to automate apps on your behalf. It reads the screen to find buttons and text fields, and performs taps and text entry to complete your tasks. No data leaves your device.</string>
+    <string name="accessibility_service_summary">Automate app tasks on your device</string>
+</resources>
