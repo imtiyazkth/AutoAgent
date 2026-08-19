@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<accessibility-service
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:description="@string/accessibility_description"
+<!--
+    AutoAgent Accessibility Service Configuration
+
+    IMPORTANT:
+    - canRetrieveWindowContent="true" is required to read the UI tree
+    - canPerformGestures="true" is required for taps/swipes
+    - settingsActivity must match the real class path in your package
+    - notificationTimeout controls minimum event polling interval (ms)
+
+    DO NOT add canRequestFilterKeyEvents="true" unless specifically needed —
+    it causes additional user-facing permission warnings.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:notificationTimeout="100"
-    android:canRetrieveWindowContent="true"
+    android:accessibilityFlags="flagReportViewIds|flagRetrieveInteractiveWindows|flagRequestEnhancedWebAccessibility"
     android:canPerformGestures="true"
-    android:canRequestFilterKeyEvents="true"
-    android:canRequestEnhancedWebAccessibility="true"
-    android:accessibilityFlags="flagReportViewIds|flagRequestFilterKeyEvents|flagRetrieveInteractiveWindows"
-    android:settingsActivity="com.autoagent.personal.presentation.MainActivity" />
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.autoagent.personal.MainActivity"
+    android:summary="@string/accessibility_service_summary" />
