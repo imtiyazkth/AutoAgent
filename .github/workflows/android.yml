@@ -2,7 +2,7 @@ name: Build & Test AutoAgent
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
   workflow_dispatch:
@@ -26,18 +26,14 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      - name: Clean
-        run: ./gradlew clean
-
-      - name: Ensure KSP generated files removed
-        run: |
-          rm -rf app/build/generated/ksp || true
+      - name: Clean build
+        run: ./gradlew clean --no-daemon
 
       - name: Run unit tests
-        run: ./gradlew test --stacktrace
+        run: ./gradlew test --no-daemon --stacktrace
 
       - name: Assemble Debug APK
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
