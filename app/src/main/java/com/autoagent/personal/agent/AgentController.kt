@@ -2,6 +2,7 @@ package com.autoagent.personal.agent
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Context
+import android.os.Bundle
 import android.util.Log
 import android.view.accessibility.AccessibilityNodeInfo
 import com.autoagent.personal.service.AutoAgentAccessibilityService
@@ -68,14 +69,11 @@ class AgentController(private val context: Context) {
                 Log.w(TAG, "Emergency stop at step $index")
                 return ExecutionResult.Cancelled
             }
-
             if (AutoAgentAccessibilityService.instance == null) {
                 Log.e(TAG, "Service lost at step $index")
                 return ExecutionResult.Failure("Service disconnected mid-task")
             }
-
             Log.d(TAG, "Step ${index + 1}/${plan.steps.size}: ${step.desc}")
-
             val stepResult = runStep(step, service)
             if (stepResult is StepResult.Fatal) {
                 return ExecutionResult.Failure(stepResult.reason)
@@ -97,15 +95,13 @@ class AgentController(private val context: Context) {
         try {
             when (step.intent) {
                 Intent.LAUNCH_APP -> {
-                    val pkg = step.target
-                    if (pkg.isBlank()) return@withContext StepResult.Fatal("Package blank")
-                    val launched = service.launchApp(context, pkg)
-                    if (!launched) StepResult.Fatal("Cannot launch '$pkg'")
+                    if (step.target.isBlank()) return@withContext StepResult.Fatal("Package blank")
+                    val launched = service.launchApp(context, step.target)
+                    if (!launched) StepResult.Fatal("Cannot launch '${step.target}'")
                     else StepResult.Ok
                 }
                 Intent.WAIT -> {
-                    val ms = step.target.toLongOrNull() ?: 1000L
-                    delay(ms.coerceIn(100, 10_000))
+                    delay((step.target.toLongOrNull() ?: 1000L).coerceIn(100, 10_000))
                     StepResult.Ok
                 }
                 Intent.TAP -> {
@@ -164,7 +160,7 @@ class AgentController(private val context: Context) {
                     if (root != null) {
                         val editable = service.findEditableNode(root)
                         if (editable != null) {
-                            val args = android.os.Bundle().apply {
+                            val args = Bundle().apply {
                                 putString(
                                     AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,
                                     step.target
@@ -181,10 +177,11 @@ class AgentController(private val context: Context) {
                         service.findEditableNode(root)
                             ?.performAction(AccessibilityNodeInfo.ACTION_NEXT_AT_MOVEMENT_GRANULARITY)
                     }
+                    service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
                     StepResult.Ok
                 }
                 Intent.SCROLL -> {
-                    service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS)
+                    service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
                     StepResult.Ok
                 }
                 Intent.HOME -> {
