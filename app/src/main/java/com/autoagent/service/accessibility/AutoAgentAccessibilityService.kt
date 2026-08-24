@@ -316,6 +316,50 @@ class AutoAgentAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) collectNodes(node.getChild(i) ?: continue, texts, clickable, onInput, onScroll, depth + 1)
     }
 
+    /**
+     * Find the first meaningful result BELOW the search/filter area by
+     * walking the accessibility tree and looking at real bounds — not a
+     * guessed screen percentage. Skips small chip-like nodes (filters,
+     * tabs) and picks the first tall clickable node (thumbnail/row).
+     */
+    fun tapFirstResultByBounds(skipTopPercent: Float = 0.20f): Boolean {
+        val root = rootInActiveWindow ?: return false
+        val dm = resources.displayMetrics
+        val skipY = dm.heightPixels * skipTopPercent
+
+        val candidates = mutableListOf<Rect>()
+        fun walk(node: AccessibilityNodeInfo, depth: Int) {
+            if (depth > MAX_TREE_DEPTH) return
+            val bounds = Rect()
+            node.getBoundsInScreen(bounds)
+            val isBigEnough = bounds.height() > dm.heightPixels * 0.08f &&
+                bounds.width() > dm.widthPixels * 0.3f
+            val isClickableOrHasClickableChild = node.isClickable
+            if (bounds.top >= skipY && isBigEnough && isClickableOrHasClickableChild) {
+                candidates.add(Rect(bounds))
+            }
+            for (i in 0 until node.childCount) {
+                walk(node.getChild(i) ?: continue, depth + 1)
+            }
+        }
+        walk(root, 0)
+
+        val target = candidates.minByOrNull { it.top } ?: return false
+        val cx = target.exactCenterX()
+        val cy = target.exactCenterY()
+
+        return try {
+            val path = Path().apply { moveTo(cx, cy) }
+            val gesture = GestureDescription.Builder()
+                .addStroke(GestureDescription.StrokeDescription(path, 0, 100))
+                .build()
+            dispatchGesture(gesture, null, null)
+        } catch (e: Exception) {
+            Log.e(TAG, "tapFirstResultByBounds failed: ${e.message}")
+            false
+        }
+    }
+
     fun tapText(text: String): Boolean {
         val root = rootInActiveWindow ?: return false
         var nodes = root.findAccessibilityNodeInfosByText(text)

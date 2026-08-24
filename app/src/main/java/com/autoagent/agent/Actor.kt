@@ -71,26 +71,26 @@ object Actor {
             }
 
             is Action.TapFirstResult -> {
-                delay(800)
-                val dm = svc.resources.displayMetrics
-                val w = dm.widthPixels.toFloat()
-                val h = dm.heightPixels.toFloat()
+                delay(1000)
 
-                // Try to find result text in accessibility tree first
+                // 1. Try exact query-word text match first (works for contacts, titles)
                 val queryWords = action.query.split(" ").filter { it.length > 2 }
                 val foundByText = queryWords.any { word ->
                     val screen = svc.getScreenState()
                     val match = screen.clickable.firstOrNull { it.contains(word, ignoreCase = true) }
-                    if (match != null) {
-                        svc.tapText(match)
-                    } else false
+                    if (match != null) svc.tapText(match) else false
                 }
 
-                if (!foundByText) {
-                    // YouTube: first video result thumbnail is at ~28% from top
-                    // WhatsApp: first contact result is at ~18% from top
-                    tapCoord(svc, w * 0.5f, h * 0.28f)
-                } else true
+                if (foundByText) {
+                    true
+                } else {
+                    // 2. Fall back to REAL bounds-based first result (not guessed %)
+                    val tapped = svc.tapFirstResultByBounds()
+                    if (!tapped) {
+                        delay(600)
+                        svc.tapFirstResultByBounds(skipTopPercent = 0.12f)
+                    } else true
+                }
             }
 
             is Action.Type -> { delay(300); svc.typeText(action.text) }
