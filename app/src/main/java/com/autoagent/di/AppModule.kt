@@ -45,6 +45,12 @@ object AppModule {
     fun provideExecutionLogDao(db: AutoAgentDatabase): ExecutionLogDao = db.logDao()
 
     @Provides @Singleton
+    fun provideMemoryDao(db: AutoAgentDatabase): MemoryDao = db.memoryDao()
+
+    @Provides @Singleton
+    fun providePinDao(db: AutoAgentDatabase): PinDao = db.pinDao()
+
+    @Provides @Singleton
     fun provideAppCacheDao(db: AutoAgentDatabase): AppCacheDao = db.appCacheDao()
 
     @Provides @Singleton
