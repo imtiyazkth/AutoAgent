@@ -13,6 +13,8 @@ import com.autoagent.personal.ai.VerificationEngine
 import com.autoagent.personal.data.db.*
 import com.autoagent.personal.data.db.AutoAgentDatabase.Companion.MIGRATION_1_2
 import com.autoagent.personal.data.db.AutoAgentDatabase.Companion.MIGRATION_2_3
+import com.autoagent.personal.data.db.AutoAgentDatabase.Companion.MIGRATION_3_4
+import com.autoagent.personal.data.db.AutoAgentDatabase.Companion.MIGRATION_4_5
 import com.autoagent.personal.engine.ConversationEngine
 import com.autoagent.personal.learning.ExperienceRecorder
 import com.autoagent.personal.perception.AccessibilityTreeParser
@@ -32,7 +34,7 @@ object AppModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): AutoAgentDatabase =
         Room.databaseBuilder(ctx, AutoAgentDatabase::class.java, "autoagent.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
             .fallbackToDestructiveMigration()
             .build()
 
@@ -41,6 +43,9 @@ object AppModule {
 
     @Provides @Singleton
     fun provideExecutionLogDao(db: AutoAgentDatabase): ExecutionLogDao = db.logDao()
+
+    @Provides @Singleton
+    fun provideAppCacheDao(db: AutoAgentDatabase): AppCacheDao = db.appCacheDao()
 
     @Provides @Singleton
     fun provideAccessibilityTreeParser() = AccessibilityTreeParser()
