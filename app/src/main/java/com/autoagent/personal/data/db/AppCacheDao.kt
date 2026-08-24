@@ -9,13 +9,16 @@ interface AppCacheDao {
     fun observeAll(): Flow<List<AppCacheEntity>>
 
     @Query("SELECT * FROM app_cache ORDER BY appName ASC")
-    suspend fun getAll(): List<AppCacheEntity>
+    suspend fun getAllAppsOnce(): List<AppCacheEntity>
 
     @Query("SELECT * FROM app_cache WHERE packageName = :pkg LIMIT 1")
     suspend fun getByPackage(pkg: String): AppCacheEntity?
 
+    @Query("SELECT MAX(scannedAt) FROM app_cache")
+    suspend fun getLastScanTime(): Long?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(apps: List<AppCacheEntity>)
+    suspend fun upsertAll(apps: List<AppCacheEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(app: AppCacheEntity)

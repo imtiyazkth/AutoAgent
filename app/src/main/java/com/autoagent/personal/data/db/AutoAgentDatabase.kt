@@ -85,7 +85,8 @@ abstract class AutoAgentDatabase : RoomDatabase() {
                         lastUpdated INTEGER NOT NULL,
                         category TEXT NOT NULL,
                         launchActivity TEXT,
-                        cachedAt INTEGER NOT NULL
+                        canLaunch INTEGER NOT NULL,
+                        scannedAt INTEGER NOT NULL
                     )
                 """.trimIndent())
             }

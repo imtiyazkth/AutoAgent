@@ -11,7 +11,8 @@ data class AppCacheEntity(
     val versionName: String = "?",
     val installDate: Long = 0,
     val lastUpdated: Long = 0,
+    val canLaunch: Boolean = true,
     val category: String = "General",
     val launchActivity: String? = null,
-    val cachedAt: Long = System.currentTimeMillis()
+    val scannedAt: Long = System.currentTimeMillis()
 )
