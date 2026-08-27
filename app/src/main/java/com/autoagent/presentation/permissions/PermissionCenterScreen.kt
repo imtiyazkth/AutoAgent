@@ -302,7 +302,7 @@ private fun buildPermissionList(
     list.add(PermissionItem(
         id = "overlay",
         title = "Display Over Other Apps",
-        reason = "Emergency stop button aur status overlay dikhane ke liye.",
+        reason = "Floating voice mic button aur emergency stop overlay ke liye.",
         risk = PermRisk.MEDIUM,
         required = false,
         status = if (overlayOk) PermStatus.GRANTED else PermStatus.PENDING,
@@ -353,6 +353,23 @@ private fun buildPermissionList(
                 Manifest.permission.READ_SMS
             ))
         }
+    ))
+
+    // 8. Notification Access (optional — for WhatsApp/SMS message reading + voice reply)
+    val notifListenerOk = run {
+        val enabledListeners = Settings.Secure.getString(
+            context.contentResolver, "enabled_notification_listeners"
+        ) ?: ""
+        enabledListeners.contains(context.packageName)
+    }
+    list.add(PermissionItem(
+        id = "notification_listener",
+        title = "Notification Access",
+        reason = "WhatsApp/Telegram/SMS message aane par TTS se sunana aur voice se reply bhejne ke liye.",
+        risk = PermRisk.HIGH,
+        required = false,
+        status = if (notifListenerOk) PermStatus.GRANTED else PermStatus.PENDING,
+        fixAction = { openSettings("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS") }
     ))
 
     return list

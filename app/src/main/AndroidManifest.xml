@@ -32,6 +32,10 @@
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
 
+    <!-- Notification listening — for WhatsApp/SMS message capture -->
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+        tools:ignore="ProtectedPermissions" />
+
     <application
         android:name=".AutoAgentApp"
         android:allowBackup="false"
@@ -74,6 +78,27 @@
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Floating Voice Widget — draws over other apps -->
+        <service
+            android:name=".service.floating.FloatingWidgetService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="floating-voice-assistant" />
+        </service>
+
+        <!-- Notification Listener — captures WhatsApp/SMS/Telegram messages -->
+        <service
+            android:name=".service.notification.MessageNotificationListener"
+            android:exported="false"
+            android:label="AutoAgent Message Reader"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
         </service>
 
         <!-- Boot Receiver — reschedule tasks after reboot -->
