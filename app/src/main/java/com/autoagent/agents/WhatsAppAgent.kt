@@ -61,7 +61,7 @@ class WhatsAppAgent @Inject constructor(
             return TaskResult(success = false, message = risk.reason)
         }
 
-        if (!AutoAgentAccessibilityService.isConnected()) {
+        if (!AutoAgentAccessibilityService.isAvailable()) {
             return TaskResult(success = false, message = "Accessibility Service ON nahi hai")
         }
 
